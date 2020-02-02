@@ -14,8 +14,7 @@ export type Logger = Pino.Logger;
  */
 export type LoggerOptions = Pino.LoggerOptions;
 
-// tslint:disable-next-line: no-magic-numbers
-export const createLogger = (opts: LoggerOptions) => Pino.default(opts, Pino.destination(2));
+export const createLogger = (opts: LoggerOptions) => Pino.default(opts, process.stderr);
 
 /**
  * For ease of testing, etc., it's often better to shut up our test

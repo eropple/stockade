@@ -6,6 +6,7 @@ import { sleepAsync } from '@stockade/utils/sleep';
 
 import { CoreError } from '../errors';
 import { GLOBAL_LIFECYCLE } from '../global';
+import { AppSpec } from '../spec';
 import { IBaseOptions } from './IBaseOptions';
 import { IRunnerBehavior } from './IRunnerBehavior';
 
@@ -27,6 +28,7 @@ export abstract class BaseRunner<
 
   private readonly _baseLogger: Logger;
   private readonly _logger: Logger;
+  protected get logger() { return this._logger; }
 
   private readonly _singletonLifecycle: LifecycleInstance;
   /**
@@ -39,10 +41,10 @@ export abstract class BaseRunner<
 
   constructor(
     behavior: IRunnerBehavior,
-    readonly appSpec: any,
+    readonly appSpec: AppSpec,
     protected readonly options: TOptions,
   ) {
-    this._baseLogger = createLogger(this.options.loggerOptions ?? {});
+    this._baseLogger = createLogger(this.options.logging ?? {});
     this._logger = this._baseLogger.child({ component: this.constructor.name });
 
     this._logger.info('Initializing base runner.');
@@ -53,8 +55,8 @@ export abstract class BaseRunner<
       new LifecycleInstance(behavior.baseLifecycle, this._singletonLifecycle, this._baseLogger);
   }
 
-  protected abstract async doStart(): Promise<void>;
-  protected abstract async doStop(): Promise<void>;
+  protected abstract async doStart(): Promise<any>;
+  protected abstract async doStop(): Promise<any>;
 
   private async start(): Promise<void> {
     this._status = RunnerStatus.STARTING;
@@ -72,6 +74,7 @@ export abstract class BaseRunner<
 
     this._logger.debug('Starting runner logic.');
     await this.start();
+    this._logger.debug('Runner.start() returned; entering poll loop for stop.');
 
     // The use of `this.status` here is intentional. TypeScript doesn't understand that `this.start()`
     // has side effects, so it thinks this condition is unsatisfiable.

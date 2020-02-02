@@ -21,7 +21,7 @@
     "clean": "find . -name \\*.js -o -name \\*.js.map -o -name \\*.d.ts | grep -v node_modules | grep -v 'jest.config.js' | xargs -- rm -- || true",
     "build": "tsc",
     "watch": "yarn run -s build --watch",
-    "start": "yarn exec -s -- node ./dist/src/index.js"
+    "start": "yarn exec -s -- node ./index.js"
   },
   "dependencies": {
     "@stockade/core": "0.1.0",
