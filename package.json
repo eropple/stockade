@@ -1,0 +1,29 @@
+{
+  "name": "@stockade-meta/workspace",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@types/jest": "^24.0.25",
+    "cross-env": "^6.0.3",
+    "jay-repl": "^0.2.2",
+    "jest": "^24.9.0",
+    "lerna": "^3.18.3",
+    "pino-pretty": "^3.5.0",
+    "pryjs": "^1.0.3",
+    "ts-jest": "^24.3.0",
+    "ts-node": "^8.6.1",
+    "tslint": "5.20.1",
+    "typescript": "^3.7.4"
+  },
+  "scripts": {
+    "lerna:run": "yarn exec -- lerna run --npm-client yarn ",
+    "lint": "yarn run -s lerna:run lint",
+    "clean": "yarn run -s lerna:run clean",
+    "build": "yarn run -s lerna:run build",
+    "watch": "yarn run -s lerna:run --stream --parallel watch",
+    "test": "yarn run -s lerna:run test"
+  }
+}

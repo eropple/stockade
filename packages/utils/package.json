@@ -1,0 +1,36 @@
+{
+  "name": "@stockade/utils",
+  "version": "0.1.0",
+  "description": "A collection of general helpers and utilities from the Stockade framework.",
+  "keywords": [
+    "stockade"
+  ],
+  "author": "Ed Ropple <ed@edropple.com>",
+  "homepage": "https://github.com/",
+  "license": "MIT",
+  "main": "dist",
+  "scripts": {
+    "lint": "tslint --project .",
+    "clean": "find . -name \\*.js -o -name \\*.js.map -o -name \\*.d.ts | grep -v node_modules | grep -v 'jest.config.js' | xargs -- rm -- || true",
+    "build": "tsc",
+    "watch": "yarn run -s build --watch",
+    "log:parse": "yarn exec -s -- pino-pretty -t",
+    "test": "jest",
+    "test:pretty": "bash -c 'yarn run -s test 2> >(yarn run -s log:parse >&2)'",
+    "test:verbose": "cross-env STOCKADE_UTILS_FALLBACK_LOGGER_LEVEL=debug jest",
+    "test:verbose:pretty": "bash -c 'yarn run -s test:verbose 2> >(yarn run -s log:parse >&2)'"
+  },
+  "dependencies": {
+    "@types/pino": "^5.15.3",
+    "pino": "^5.16.0",
+    "runtypes": "^4.0.3",
+    "utility-types": "^3.10.0"
+  },
+  "peerDependencies": {
+    "reflect-metadata": "^0.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "12.12.6",
+    "reflect-metadata": "^0.1.13"
+  }
+}

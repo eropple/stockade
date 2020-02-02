@@ -1,0 +1,42 @@
+{
+  "name": "@stockade/http",
+  "version": "0.1.0",
+  "description": "Web server functionality for the Stockade framework",
+  "keywords": [
+    "api",
+    "web",
+    "framework",
+    "http",
+    "openapi3",
+    "swagger",
+    "openapi"
+  ],
+  "author": "Ed Ropple <ed@edropple.com>",
+  "homepage": "https://github.com/",
+  "license": "MIT",
+  "main": "dist",
+  "scripts": {
+    "lint": "tslint --project .",
+    "clean": "find . -name \\*.js -o -name \\*.js.map -o -name \\*.d.ts | grep -v node_modules | grep -v 'jest.config.js' | xargs -- rm -- || true",
+    "build": "tsc",
+    "watch": "yarn run -s build --watch",
+    "log:parse": "yarn exec -s -- pino-pretty -t",
+    "test": "jest",
+    "test:pretty": "bash -c 'yarn run -s test 2> >(yarn run -s log:parse >&2)'",
+    "test:verbose": "cross-env STOCKADE_UTILS_FALLBACK_LOGGER_LEVEL=debug jest",
+    "test:verbose:pretty": "bash -c 'yarn run -s test:verbose 2> >(yarn run -s log:parse >&2)'"
+  },
+  "dependencies": {
+    "fastify": "2.10.0",
+    "runtypes": "^4.0.3"
+  },
+  "peerDependencies": {
+    "@stockade/core": "^0.1.0",
+    "reflect-metadata": "^0.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "12.12.6",
+    "@stockade/core": "^0.1.0",
+    "reflect-metadata": "^0.1.13"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "defaultSeverity": "error",
+  "extends": ["tslint:recommended"],
+  "rules": {
+    "array-type": [true, "generic"],
+    "arrow-parens": false,
+    "ban-ts-ignore": true,
+    "ban-types": [true, ["String"], ["Number"]],
+    "eofline": true,
+    "increment-decrement": true,
+    "interface-name": true,
+    "invalid-void": true,
+    "linebreak-style": [true, "LF"],
+    "max-classes-per-file": false,
+    "max-line-length": [true, 110],
+    "member-access": [false],
+    "member-ordering": false,
+    "newline-before-return": true,
+    "no-construct": true,
+    "no-default-export": true,
+    "no-duplicate-imports": true,
+    "no-empty-interface": false,
+    "no-empty": false,
+    "no-floating-promises": true,
+    "no-internal-module": true,
+    "no-magic-numbers": true,
+    "no-submodule-imports": false,
+    "no-switch-case-fall-through": true,
+    "no-unnecessary-callback-wrapper": true,
+    "no-void-expression": true,
+    "object-literal-sort-keys": false,
+    "prefer-for-of": true,
+    "prefer-function-over-method": true,
+    "prefer-object-spread": true,
+    "prefer-switch": true,
+    "prefer-template": true,
+    "prefer-while": true,
+    "quotemark": [true, "single", "avoid-escape"],
+    "return-undefined": true,
+    "static-this": true,
+    "triple-equals": true,
+    "unnecessary-bind": true,
+    "unnecessary-else": true,
+    "variable-name": false,
+
+    "ordered-imports": [
+      true,
+      {
+          "grouped-imports": true,
+          "groups": [
+            {
+              "name": "Stockade cross-module imports",
+              "match": "^(@stockade)",
+              "order": 100
+            },
+            {
+              "name": "Third party imports",
+              "match": "^[a-zA-Z0-9@]",
+              "order": 50
+            }
+          ]
+      }]
+  },
+  "rulesDirectory": []
+}
