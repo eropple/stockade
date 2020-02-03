@@ -11,7 +11,7 @@ import { DependencyKey } from '@stockade/inject/domain/dependency-utils';
 import { IModule } from './IModule';
 
 export abstract class ModuleBuilderBase<TModule extends IModule> {
-  protected readonly mod: TModule;
+  readonly mod: TModule;
 
   constructor(m: TModule) {
     this.mod = m;
@@ -24,23 +24,30 @@ export abstract class ModuleBuilderBase<TModule extends IModule> {
     return this;
   }
 
-  import(i: ImportDefinition | DependencyKey) {
+  children(...ch: Array<IModule>) {
+    this.mod.children = this.mod.children ?? [];
+    this.mod.children.push(...ch);
+
+    return this;
+  }
+
+  import(...i: Array<ImportDefinition | DependencyKey>) {
     this.mod.imports = this.mod.imports ?? [];
-    this.mod.imports.push(i);
+    this.mod.imports.push(...i);
 
     return this;
   }
 
-  export(e: ExportDefinition | DependencyKey) {
+  export(...e: Array<ExportDefinition | DependencyKey>) {
     this.mod.exports = this.mod.exports ?? [];
-    this.mod.exports.push(e);
+    this.mod.exports.push(...e);
 
     return this;
   }
 
-  provide(p: IProviderDefinition | Class<any>) {
+  provide(...p: Array<IProviderDefinition | Class<any>>) {
     this.mod.provides = this.mod.provides ?? [];
-    this.mod.provides.push(p);
+    this.mod.provides.push(...p);
 
     return this;
   }

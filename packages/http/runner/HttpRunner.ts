@@ -1,7 +1,7 @@
 import * as Fastify from 'fastify';
 import uuidV4 from 'uuid/v4';
 
-import { IAppSpec } from '@stockade/core';
+import { IAppSpec, IModule } from '@stockade/core';
 import { BaseRunner, IRunnerBehavior } from '@stockade/core/runner';
 
 import { IHttpOptions } from './IHttpOptions';
@@ -48,6 +48,7 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
     return ret;
   }
 
+  // tslint:disable-next-line: prefer-function-over-method
   private _prepareFastifyListenOptions(opts: IHttpOptions): Fastify.ListenOptions {
     const ret = opts?.fastify?.listen ?? {};
     ret.port = ret.port ?? DEFAULT_HTTP_PORT;

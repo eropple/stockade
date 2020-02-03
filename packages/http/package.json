@@ -17,7 +17,6 @@
   "main": "dist",
   "scripts": {
     "lint": "tslint --project .",
-    "clean": "find . -name \\*.js -o -name \\*.js.map -o -name \\*.d.ts | grep -v node_modules | grep -v 'jest.config.js' | xargs -- rm -- || true",
     "build": "tsc",
     "watch": "yarn run -s build --watch",
     "log:parse": "yarn exec -s -- pino-pretty -t",
