@@ -28,13 +28,14 @@
   },
   "dependencies": {
     "@stockade/inject": "0.1.0",
-    "runtypes": "^4.0.3"
+    "@stockade/utils": "0.1.0",
+    "runtypes": "4.0.3",
+    "reflect-metadata": "0.1.13",
+    "utility-types": "3.10.0"
   },
   "peerDependencies": {
-    "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {
-    "@types/node": "12.12.6",
-    "reflect-metadata": "^0.1.13"
+    "@types/node": "12.12.6"
   }
 }

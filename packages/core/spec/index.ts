@@ -1,1 +1,2 @@
-export * from './AppSpec';
+export * from './app-spec';
+export * from './module';

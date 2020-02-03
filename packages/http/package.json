@@ -28,15 +28,17 @@
   },
   "dependencies": {
     "fastify": "2.10.0",
-    "runtypes": "^4.0.3"
+    "reflect-metadata": "0.1.13",
+    "runtypes": "4.0.3",
+    "utility-types": "3.10.0",
+    "uuid": "^3.4.0"
   },
   "peerDependencies": {
-    "@stockade/core": "^0.1.0",
-    "reflect-metadata": "^0.1.13"
+    "@stockade/core": "0.1.0"
   },
   "devDependencies": {
+    "@stockade/core": "0.1.0",
     "@types/node": "12.12.6",
-    "@stockade/core": "^0.1.0",
-    "reflect-metadata": "^0.1.13"
+    "@types/uuid": "^3.4.7"
   }
 }

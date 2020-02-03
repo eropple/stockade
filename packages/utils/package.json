@@ -21,16 +21,15 @@
     "test:verbose:pretty": "bash -c 'yarn run -s test:verbose 2> >(yarn run -s log:parse >&2)'"
   },
   "dependencies": {
-    "@types/pino": "^5.15.3",
-    "pino": "^5.16.0",
-    "runtypes": "^4.0.3",
-    "utility-types": "^3.10.0"
+    "@types/pino": "5.15.3",
+    "pino": "5.16.0",
+    "runtypes": "4.0.3",
+    "utility-types": "3.10.0",
+    "reflect-metadata": "0.1.13"
   },
   "peerDependencies": {
-    "reflect-metadata": "^0.1.13"
   },
   "devDependencies": {
-    "@types/node": "12.12.6",
-    "reflect-metadata": "^0.1.13"
+    "@types/node": "12.12.6"
   }
 }

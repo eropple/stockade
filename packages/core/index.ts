@@ -1,3 +1,3 @@
 import 'reflect-metadata';
 
-export { AppSpec } from './spec';
+export * from './spec';

@@ -26,15 +26,14 @@
     "test:verbose:pretty": "bash -c 'yarn run -s test:verbose 2> >(yarn run -s log:parse >&2)'"
   },
   "dependencies": {
-    "runtypes": "^4.0.3"
+    "runtypes": "4.0.3",
+    "reflect-metadata": "0.1.13"
   },
   "peerDependencies": {
-    "@stockade/core": "^0.1.0",
-    "reflect-metadata": "^0.1.13"
+    "@stockade/core": "0.1.0"
   },
   "devDependencies": {
     "@types/node": "12.12.6",
-    "@stockade/core": "^0.1.0",
-    "reflect-metadata": "^0.1.13"
+    "@stockade/core": "0.1.0"
   }
 }

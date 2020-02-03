@@ -1,6 +1,7 @@
 import * as Fastify from 'fastify';
+import uuidV4 from 'uuid/v4';
 
-import { AppSpec } from '@stockade/core';
+import { IAppSpec } from '@stockade/core';
 import { BaseRunner, IRunnerBehavior } from '@stockade/core/runner';
 
 import { IHttpOptions } from './IHttpOptions';
@@ -16,42 +17,42 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
   private readonly fastify: Fastify.FastifyInstance;
 
   constructor(
-    readonly appSpec: AppSpec,
+    readonly appSpec: IAppSpec,
     options: IHttpOptions,
   ) {
     super(HTTP_BEHAVIOR, appSpec, options);
 
-    const fastifyServerOptions: Fastify.ServerOptions = prepareFastifyServerOptions(options);
+    const fastifyServerOptions: Fastify.ServerOptions = this._prepareFastifyServerOptions(options);
     this.logger.debug({ fastifyServerOptions }, 'Creating Fastify instance.');
     this.fastify = Fastify.default(fastifyServerOptions);
   }
   protected doStart(): Promise<any> {
-    const fastifyListenOptions = prepareFastifyListenOptions(this.options);
+    const fastifyListenOptions = this._prepareFastifyListenOptions(this.options);
     this.logger.debug({ fastifyListenOptions }, 'Fastify listen options.');
     this.logger.info(`Starting Fastify on port '${fastifyListenOptions.port}`);
 
-    return this.fastify.listen(prepareFastifyListenOptions(this.options));
+    return this.fastify.listen(fastifyListenOptions);
   }
 
   protected doStop(): Promise<any> {
     return this.fastify.close();
   }
-}
 
-function prepareFastifyServerOptions(opts: IHttpOptions): Fastify.ServerOptions {
-  const ret = opts?.fastify?.server ?? {};
+  private _prepareFastifyServerOptions(opts: IHttpOptions): Fastify.ServerOptions {
+    const childLogger = this.logger.child({ component: 'Fastify' });
+    (childLogger as any).genReqId = uuidV4;
 
-  ret.logger = ret.logger ?? opts.logging ?? {
-    level: 'info',
-  };
-  ret.logger.stream = process.stderr;
+    const ret = opts?.fastify?.server ?? {};
+    ret.logger = childLogger;
 
-  return ret;
-}
+    return ret;
+  }
 
-function prepareFastifyListenOptions(opts: IHttpOptions): Fastify.ListenOptions {
-  const ret = opts?.fastify?.listen ?? {};
-  ret.port = ret.port ?? DEFAULT_HTTP_PORT;
+  private _prepareFastifyListenOptions(opts: IHttpOptions): Fastify.ListenOptions {
+    const ret = opts?.fastify?.listen ?? {};
+    ret.port = ret.port ?? DEFAULT_HTTP_PORT;
 
-  return ret;
+    return ret;
+  }
+
 }

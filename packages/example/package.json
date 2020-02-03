@@ -21,13 +21,14 @@
     "clean": "find . -name \\*.js -o -name \\*.js.map -o -name \\*.d.ts | grep -v node_modules | grep -v 'jest.config.js' | xargs -- rm -- || true",
     "build": "tsc",
     "watch": "yarn run -s build --watch",
-    "start": "yarn exec -s -- node ./index.js"
+    "log:parse": "yarn exec -s -- pino-pretty -t",
+    "start": "bash -c 'yarn run -s start:raw 2> >(yarn run -s log:parse >&2)'",
+    "start:raw": "yarn exec -s -- node ./index.js"
   },
   "dependencies": {
     "@stockade/core": "0.1.0",
     "@stockade/http": "0.1.0",
-    "@stockade/inject": "0.1.0",
-    "reflect-metadata": "^0.1.13"
+    "reflect-metadata": "0.1.13"
   },
   "devDependencies": {
   }

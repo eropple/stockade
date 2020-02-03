@@ -1,16 +1,17 @@
 import {
-  IDomainDefinition, LifecycleInstance, SINGLETON,
+  LifecycleInstance, SINGLETON,
 } from '@stockade/inject';
-import { createLogger, FallbackLogger, Logger } from '@stockade/utils/logging';
+import { createLogger, Logger } from '@stockade/utils/logging';
 import { sleepAsync } from '@stockade/utils/sleep';
 
 import { CoreError } from '../errors';
 import { GLOBAL_LIFECYCLE } from '../global';
-import { AppSpec } from '../spec';
+import { IAppSpec } from '../spec';
 import { IBaseOptions } from './IBaseOptions';
 import { IRunnerBehavior } from './IRunnerBehavior';
 
-export const RUN_WAIT_MS = 100;
+const RUN_WAIT_MS = 100;
+const EXIT_CODE_WHEN_STOP_FAILS = 33;
 
 export enum RunnerStatus {
   CREATED = 'created',
@@ -28,7 +29,7 @@ export abstract class BaseRunner<
 
   private readonly _baseLogger: Logger;
   private readonly _logger: Logger;
-  protected get logger() { return this._logger; }
+  get logger() { return this._logger; }
 
   private readonly _singletonLifecycle: LifecycleInstance;
   /**
@@ -41,7 +42,7 @@ export abstract class BaseRunner<
 
   constructor(
     behavior: IRunnerBehavior,
-    readonly appSpec: AppSpec,
+    readonly appSpec: IAppSpec,
     protected readonly options: TOptions,
   ) {
     this._baseLogger = createLogger(this.options.logging ?? {});
@@ -103,8 +104,26 @@ export abstract class BaseRunner<
    */
   private _attachSignalEvents() {
     this._logger.debug('Attaching signal events.');
-    process.on('SIGINT', () => this.stop());
-    process.on('SIGTERM', () => this.stop());
+    process.on('SIGINT', async () => {
+      this._logger.info('SIGINT caught.');
+
+      try {
+        await this.stop();
+      } catch (err) {
+        this._logger.error({ err }, 'Error handling SIGINT. Not much to do here; bailing hard.');
+        process.exit(EXIT_CODE_WHEN_STOP_FAILS);
+      }
+    });
+    process.on('SIGTERM', async () => {
+      this._logger.info('SIGTERM caught.');
+
+      try {
+        await this.stop();
+      } catch (err) {
+        this._logger.error({ err }, 'Error handling SIGTERM. Not much to do here; bailing hard.');
+        process.exit(EXIT_CODE_WHEN_STOP_FAILS);
+      }
+    });
 
     // TODO: implement SIGHUP to force config reloads
     process.on('SIGHUP', () => {});

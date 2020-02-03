@@ -1,8 +1,13 @@
+import { App } from '@stockade/core';
 import { HttpRunner } from '@stockade/http';
 
-const runner = new HttpRunner(null, {});
+const app =
+  App()
+    .build();
+
+const runner = new HttpRunner(app, {});
 runner.run().then(() => {
-  console.log('success');
+  runner.logger.info('success! (exiting)');
 }).catch((err) => {
-  console.log('failure', err);
+  runner.logger.error({ err }, 'failure! (exiting)');
 });
