@@ -1,9 +1,6 @@
 import { App, AppSpecBuilder, IModule, Module, ModuleBuilder } from '@stockade/core';
 import { HttpRunner } from '@stockade/http';
 
-const m: IModule;
-m.controllers = undefined;
-
 const app =
   App()
     .children(

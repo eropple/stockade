@@ -7,4 +7,6 @@ export class AppSpecBuilder extends ModuleBuilderBase<IAppSpec> {
   }
 }
 
-export function App() { return new AppSpecBuilder(); }
+export function App(): AppSpecBuilder {
+  return new AppSpecBuilder();
+}

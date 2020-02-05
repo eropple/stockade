@@ -3,27 +3,30 @@ import { Class } from 'utility-types';
 import { IModule, ModuleBuilderBase } from '@stockade/core';
 
 import { IInterceptorDefinitionArg } from '../interceptors';
-import './__builders';
 import './__module';
 
-ModuleBuilderBase.prototype.controllers =
+// These prototypes have to cast `this` so we can get access to
+// the private `mod` instance. Which is a shame. But we can
+// consider it privileged here.
+
+(ModuleBuilderBase.prototype as any).controllers =
   function<TModule extends IModule>(
     this: ModuleBuilderBase<TModule>,
     ...c: Array<Class<any>>
   ) {
-    this.mod.controllers = this.mod.controllers ?? [];
-    this.mod.controllers.push(...c);
+    (this as any).mod.controllers = (this as any).mod.controllers ?? [];
+    (this as any).mod.controllers.push(...c);
 
     return this;
   };
 
-ModuleBuilderBase.prototype.interceptors =
+(ModuleBuilderBase.prototype as any).interceptors =
   function<TModule extends IModule>(
     this: ModuleBuilderBase<TModule>,
     ...i: Array<IInterceptorDefinitionArg>
   ) {
-    this.mod.interceptors = this.mod.interceptors ?? [];
-    this.mod.interceptors.push(...i);
+    (this as any).mod.interceptors = (this as any).mod.interceptors ?? [];
+    (this as any).mod.interceptors.push(...i);
 
     return this;
   };

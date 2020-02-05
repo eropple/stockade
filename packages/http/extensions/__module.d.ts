@@ -1,11 +1,12 @@
+import { Class } from 'utility-types';
+
 import {
   IModule,
   IAppSpec,
-  ModuleBuilderBase,
-  ModuleBuilder,
-  AppSpecBuilder,
 } from '@stockade/core';
 import { IDomainDefinition } from '@stockade/inject';
+
+import { IInterceptorDefinitionArg } from '../interceptors';
 
 // THIS IS EXTREMELY IMPORTANT
 // TypeScript module augmentation is extremely touchy. If you don't precisely
@@ -18,7 +19,7 @@ import { IDomainDefinition } from '@stockade/inject';
 // -  `interface IModule extends IDomainDefinition` will _not_ throw and error
 //    if you do not import both `IModule` (ok...) and `IDomainDefinition` (WTF?)
 declare module '@stockade/core' {
-  interface IModule extends IDomainDefinition {
+  export interface IModule extends IDomainDefinition {
     /**
      * Specifies HTTP endpoint controllers to be hoisted into the router.
      * Any classes in this array must implement the `@Controller()` decorator
@@ -37,7 +38,7 @@ declare module '@stockade/core' {
     interceptors?: Array<IInterceptorDefinitionArg>;
   }
 
-  interface IAppSpec extends IModule {}
+  export interface IAppSpec extends IModule {}
 }
 
 

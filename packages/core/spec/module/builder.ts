@@ -11,7 +11,7 @@ import { DependencyKey } from '@stockade/inject/domain/dependency-utils';
 import { IModule } from './IModule';
 
 export abstract class ModuleBuilderBase<TModule extends IModule> {
-  readonly mod: TModule;
+  private readonly mod: TModule;
 
   constructor(m: TModule) {
     this.mod = m;
@@ -62,4 +62,6 @@ export class ModuleBuilder extends ModuleBuilderBase<IModule> {
   }
 }
 
-export function Module(name: string) { return new ModuleBuilder(name); }
+export function Module(name: string): ModuleBuilder {
+  return new ModuleBuilder(name);
+}
