@@ -17,13 +17,6 @@ export abstract class ModuleBuilderBase<TModule extends IModule> {
     this.mod = m;
   }
 
-  child(ch: IModule) {
-    this.mod.children = this.mod.children ?? [];
-    this.mod.children.push(ch);
-
-    return this;
-  }
-
   children(...ch: Array<IModule>) {
     this.mod.children = this.mod.children ?? [];
     this.mod.children.push(...ch);

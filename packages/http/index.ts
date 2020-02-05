@@ -1,7 +1,5 @@
 import 'reflect-metadata';
 
-import '@stockade/core';
-
-import './module/extensions';
+import './extensions';
 
 export * from './runner';

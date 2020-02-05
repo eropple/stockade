@@ -1,5 +1,24 @@
-export declare module '@stockade/core' {
-  export interface IModule {
+import {
+  IModule,
+  IAppSpec,
+  ModuleBuilderBase,
+  ModuleBuilder,
+  AppSpecBuilder,
+} from '@stockade/core';
+import { IDomainDefinition } from '@stockade/inject';
+
+// THIS IS EXTREMELY IMPORTANT
+// TypeScript module augmentation is extremely touchy. If you don't precisely
+// redeclare the signature of an interface or class, it will just shadow your
+// original. This stinks and sucks and should probably not be allowed, but
+// there you have it.
+//
+// In the case below:
+// -  `interface IModule` will shadow
+// -  `interface IModule extends IDomainDefinition` will _not_ throw and error
+//    if you do not import both `IModule` (ok...) and `IDomainDefinition` (WTF?)
+declare module '@stockade/core' {
+  interface IModule extends IDomainDefinition {
     /**
      * Specifies HTTP endpoint controllers to be hoisted into the router.
      * Any classes in this array must implement the `@Controller()` decorator
@@ -18,19 +37,9 @@ export declare module '@stockade/core' {
     interceptors?: Array<IInterceptorDefinitionArg>;
   }
 
-  export class ModuleBuilderBase<TModule extends IModule> {
-    readonly mod: TModule;
-
-    /**
-     * @see {IModule.controllers}
-     * @param c The controllers to register
-     */
-    controllers(...c: Array<Class<any>>): this;
-
-    /**
-     * @see {IModule.interceptors}
-     * @param i The interceptors to register
-     */
-    interceptors(...i: Array<IInterceptorDefinitionArg>): this;
-  }
+  interface IAppSpec extends IModule {}
 }
+
+
+
+

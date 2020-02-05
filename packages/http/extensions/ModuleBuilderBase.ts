@@ -3,6 +3,7 @@ import { Class } from 'utility-types';
 import { IModule, ModuleBuilderBase } from '@stockade/core';
 
 import { IInterceptorDefinitionArg } from '../interceptors';
+import './__builders';
 import './__module';
 
 ModuleBuilderBase.prototype.controllers =
