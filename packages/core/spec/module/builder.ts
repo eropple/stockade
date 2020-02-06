@@ -8,6 +8,7 @@ import {
 } from '@stockade/inject/domain';
 import { DependencyKey } from '@stockade/inject/domain/dependency-utils';
 
+import { CoreError } from '../../errors';
 import { IModule } from './IModule';
 
 export abstract class ModuleBuilderBase<TModule extends IModule> {
@@ -58,10 +59,19 @@ export abstract class ModuleBuilderBase<TModule extends IModule> {
 
 export class ModuleBuilder extends ModuleBuilderBase<IModule> {
   constructor(name: string) {
-    super({ name });
+    super({ name, $isStockadeModule: true });
   }
 }
 
+/**
+ * Initializes a new `ModuleBuilder`.
+ *
+ * @param name The name of the module. Can be any string except 'APP'.
+ */
 export function Module(name: string): ModuleBuilder {
+  if (name === 'APP') {
+    throw new CoreError('A module that is not an `IAppSpec` cannot be named `APP`.');
+  }
+
   return new ModuleBuilder(name);
 }

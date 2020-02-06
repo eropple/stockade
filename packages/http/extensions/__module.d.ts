@@ -38,7 +38,9 @@ declare module '@stockade/core' {
     interceptors?: Array<IInterceptorDefinitionArg>;
   }
 
-  export interface IAppSpec extends IModule {}
+  export interface IAppSpec extends IModule {
+
+  }
 }
 
 
