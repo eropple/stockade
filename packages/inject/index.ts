@@ -3,10 +3,7 @@ export {
   IAutoComponentArgs,
   Inject,
 } from './annotations';
-export {
-  IDomainDefinition,
-  Domain,
-} from './domain';
+export * from './domain';
 export {
   ILifecycle,
   LifecycleInstance,

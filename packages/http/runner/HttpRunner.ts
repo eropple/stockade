@@ -55,5 +55,4 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
 
     return ret;
   }
-
 }

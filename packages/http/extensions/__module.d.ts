@@ -17,7 +17,8 @@ import { IInterceptorDefinitionArg } from '../interceptors';
 // In the case below:
 // -  `interface IModule` will shadow
 // -  `interface IModule extends IDomainDefinition` will _not_ throw and error
-//    if you do not import both `IModule` (ok...) and `IDomainDefinition` (WTF?)
+//    if you do not import both `IModule` (ok...) and `IDomainDefinition` (WTF?),
+//    and will just overwrite the declaration
 declare module '@stockade/core' {
   export interface IModule extends IDomainDefinition {
     /**
@@ -36,10 +37,6 @@ declare module '@stockade/core' {
      * TODO: Find a good stable sort for these.
      */
     interceptors?: Array<IInterceptorDefinitionArg>;
-  }
-
-  export interface IAppSpec extends IModule {
-
   }
 }
 

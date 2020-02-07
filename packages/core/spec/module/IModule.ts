@@ -1,12 +1,12 @@
 import { Class } from 'utility-types';
 
-import { IDomainDefinition } from '@stockade/inject';
 import {
   DynamicProviderFn,
   ExportDefinition,
+  IDomainDefinition,
   ImportDefinition,
   IProviderDefinition,
-} from '@stockade/inject/domain';
+} from '@stockade/inject';
 import { DependencyKey } from '@stockade/inject/domain/dependency-utils';
 
 /**
@@ -16,7 +16,7 @@ export interface IModule extends IDomainDefinition {
   $isStockadeModule: true;
 
   name: string;
-  children?: Array<IDomainDefinition>;
+  children?: Array<IModule>;
   imports?: Array<ImportDefinition | DependencyKey>;
   exports?: Array<ExportDefinition | DependencyKey>;
   provides?: Array<IProviderDefinition | Class<any>>;
