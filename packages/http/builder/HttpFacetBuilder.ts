@@ -28,13 +28,13 @@ export abstract class HttpFacetBuilderBase<
 // TODO: figure out how to better unify this
 
 export class HttpModuleFacetBuilder extends HttpFacetBuilderBase<IModule> {
-  transform(m: IModule) {
+  transform(m: IModule): IModule {
     return { ...m, controllers: this._controllers, interceptors: this._interceptors };
   }
 }
 
 export class HttpAppSpecFacetBuilder extends HttpFacetBuilderBase<IAppSpec> {
-  transform(m: IAppSpec) {
+  transform(m: IAppSpec): IAppSpec {
     return { ...m, controllers: this._controllers, interceptors: this._interceptors };
   }
 }

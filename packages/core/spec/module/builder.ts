@@ -13,7 +13,7 @@ import { FacetBuilderBase } from '../facets';
 import { IModule, isStockadeModule } from './IModule';
 
 export abstract class ModuleBuilderBase<TModule extends IModule> {
-  private _mod: TModule;
+  protected _mod: TModule;
 
   constructor(m: TModule) {
     this._mod = m;
@@ -51,12 +51,6 @@ export abstract class ModuleBuilderBase<TModule extends IModule> {
     return this;
   }
 
-  apply(facet: FacetBuilderBase<TModule>): this {
-    this._mod = facet.transform(this._mod);
-
-    return this;
-  }
-
   build(): TModule {
     return this._mod;
   }
@@ -67,6 +61,12 @@ export class ModuleBuilder extends ModuleBuilderBase<IModule> {
 
   constructor(name: string) {
     super({ name, $isStockadeModule: true });
+  }
+
+  apply(facet: FacetBuilderBase<IModule>): this {
+    this._mod = facet.transform(this._mod);
+
+    return this;
   }
 }
 
