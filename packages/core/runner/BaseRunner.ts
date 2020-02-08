@@ -6,7 +6,7 @@ import { sleepAsync } from '@stockade/utils/sleep';
 
 import { CoreError } from '../errors';
 import { GLOBAL_LIFECYCLE } from '../global';
-import { IAppSpec } from '../spec';
+import { AppSpecBuilder, IAppSpec, isAppSpecBuilder } from '../spec';
 import { IBaseOptions } from './IBaseOptions';
 import { IRunnerBehavior } from './IRunnerBehavior';
 
@@ -40,15 +40,19 @@ export abstract class BaseRunner<
    */
   protected readonly lifecycle: LifecycleInstance;
 
+  readonly appSpec: IAppSpec;
+
   constructor(
     behavior: IRunnerBehavior,
-    readonly appSpec: IAppSpec,
+    appSpec: IAppSpec | AppSpecBuilder,
     protected readonly options: TOptions,
   ) {
     this._baseLogger = createLogger(this.options.logging ?? {});
     this._logger = this._baseLogger.child({ component: this.constructor.name });
 
     this._logger.info('Initializing base runner.');
+
+    this.appSpec = isAppSpecBuilder(appSpec) ? appSpec.build() : appSpec;
 
     this._singletonLifecycle =
       new LifecycleInstance(SINGLETON, GLOBAL_LIFECYCLE, this._baseLogger);

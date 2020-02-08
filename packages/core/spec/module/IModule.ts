@@ -13,14 +13,14 @@ import { DependencyKey } from '@stockade/inject/domain/dependency-utils';
  * The basic definition of a Stockade module.
  */
 export interface IModule extends IDomainDefinition {
-  $isStockadeModule: true;
+  readonly $isStockadeModule: true;
 
-  name: string;
-  children?: Array<IModule>;
-  imports?: Array<ImportDefinition | DependencyKey>;
-  exports?: Array<ExportDefinition | DependencyKey>;
-  provides?: Array<IProviderDefinition | Class<any>>;
-  dynamicProviders?: DynamicProviderFn;
+  readonly name: string;
+  readonly children?: ReadonlyArray<IModule>;
+  readonly imports?: ReadonlyArray<ImportDefinition | DependencyKey>;
+  readonly exports?: ReadonlyArray<ExportDefinition | DependencyKey>;
+  readonly provides?: ReadonlyArray<IProviderDefinition | Class<any>>;
+  readonly dynamicProviders?: DynamicProviderFn;
 }
 
 export function isStockadeModule(o: unknown): o is IModule {

@@ -1,7 +1,7 @@
 import * as Fastify from 'fastify';
 import uuidV4 from 'uuid/v4';
 
-import { IAppSpec, IModule } from '@stockade/core';
+import { AppSpecBuilder, IAppSpec, IModule } from '@stockade/core';
 import { BaseRunner, IRunnerBehavior } from '@stockade/core/runner';
 
 import { IHttpOptions } from './IHttpOptions';
@@ -17,7 +17,7 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
   private readonly fastify: Fastify.FastifyInstance;
 
   constructor(
-    readonly appSpec: IAppSpec,
+    appSpec: IAppSpec | AppSpecBuilder,
     options: IHttpOptions,
   ) {
     super(HTTP_BEHAVIOR, appSpec, options);

@@ -1,13 +1,17 @@
-import { App, AppSpecBuilder, IModule, Module, ModuleBuilder } from '@stockade/core';
-import { HttpRunner } from '@stockade/http';
+import { App, Module } from '@stockade/core';
+import { Http, HttpApp, HttpRunner } from '@stockade/http';
 
 const app =
   App()
     .children(
       Module('foo')
-        .build(),
+        .apply(
+          Http(),
+        ),
     )
-    .build();
+    .apply(
+      HttpApp(),
+    );
 
 const runner = new HttpRunner(app, {});
 runner.run().then(() => {

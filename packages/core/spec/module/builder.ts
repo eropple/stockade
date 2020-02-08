@@ -9,55 +9,62 @@ import {
 import { DependencyKey } from '@stockade/inject/domain/dependency-utils';
 
 import { CoreError } from '../../errors';
-import { IModule } from './IModule';
+import { FacetBuilderBase } from '../facets';
+import { IModule, isStockadeModule } from './IModule';
 
 export abstract class ModuleBuilderBase<TModule extends IModule> {
-  private readonly mod: TModule;
+  private _mod: TModule;
 
   constructor(m: TModule) {
-    this.mod = m;
+    this._mod = m;
   }
 
-  children(...ch: Array<IModule>) {
-    this.mod.children = this.mod.children ?? [];
-    this.mod.children.push(...ch);
+  children(...ch: Array<IModule | ModuleBuilder>): this {
+    const result = ch.map(c =>
+      isStockadeModule(c) ? c : c.build());
+    this._mod = { ...this._mod, children: (this._mod.children ?? []).concat(...result) };
 
     return this;
   }
 
-  import(...i: Array<ImportDefinition | DependencyKey>) {
-    this.mod.imports = this.mod.imports ?? [];
-    this.mod.imports.push(...i);
+  import(...i: Array<ImportDefinition | DependencyKey>): this {
+    this._mod = { ...this._mod, imports: (this._mod.imports ?? []).concat(...i) };
 
     return this;
   }
 
-  export(...e: Array<ExportDefinition | DependencyKey>) {
-    this.mod.exports = this.mod.exports ?? [];
-    this.mod.exports.push(...e);
+  export(...e: Array<ExportDefinition | DependencyKey>): this {
+    this._mod = { ...this._mod, exports: (this._mod.exports ?? []).concat(...e) };
 
     return this;
   }
 
-  provide(...p: Array<IProviderDefinition | Class<any>>) {
-    this.mod.provides = this.mod.provides ?? [];
-    this.mod.provides.push(...p);
+  provide(...p: Array<IProviderDefinition | Class<any>>): this {
+    this._mod = { ...this._mod, provides: (this._mod.provides ?? []).concat(...p) };
 
     return this;
   }
 
-  dynamicallyProvide(fn: DynamicProviderFn) {
-    this.mod.dynamicProviders = fn;
+  dynamicallyProvide(fn: DynamicProviderFn): this {
+    this._mod = { ...this._mod, dynamicProviders: fn };
+
+    return this;
+  }
+
+  apply(facet: FacetBuilderBase<TModule>): this {
+    this._mod = facet.transform(this._mod);
 
     return this;
   }
 
   build(): TModule {
-    return this.mod;
+    return this._mod;
   }
 }
 
 export class ModuleBuilder extends ModuleBuilderBase<IModule> {
+  readonly $isStockadeModuleBuilder: true = true;
+
   constructor(name: string) {
     super({ name, $isStockadeModule: true });
   }
@@ -74,4 +81,8 @@ export function Module(name: string): ModuleBuilder {
   }
 
   return new ModuleBuilder(name);
+}
+
+export function isModuleBuilder(o: any): o is ModuleBuilder {
+  return (o as any).$isStockadeModuleBuilder;
 }

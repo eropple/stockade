@@ -26,7 +26,7 @@ declare module '@stockade/core' {
      * Any classes in this array must implement the `@Controller()` decorator
      * or a runtime exception will be thrown.
      */
-    controllers?: Array<Class<any>>;
+    controllers?: ReadonlyArray<Class<any>>;
 
     /**
      * Specifies HTTP interceptors to be registered into the router. Interceptors
@@ -36,7 +36,7 @@ declare module '@stockade/core' {
      *
      * TODO: Find a good stable sort for these.
      */
-    interceptors?: Array<IInterceptorDefinitionArg>;
+    interceptors?: ReadonlyArray<IInterceptorDefinitionArg>;
   }
 }
 
