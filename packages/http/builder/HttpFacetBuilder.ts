@@ -1,6 +1,7 @@
 import { Class } from 'utility-types';
 
-import { FacetBuilderBase, IAppSpec, IModule } from '@stockade/core';
+import { FacetBuilderBase } from '@stockade/core/spec/FacetBuilderBase';
+import { IAppSpec, IModule } from '@stockade/core/spec/IModule';
 
 import { IInterceptorDefinitionArg } from '../interceptors';
 
@@ -22,21 +23,22 @@ export abstract class HttpFacetBuilderBase<
     return this;
   }
 
-  abstract transform(m: TModule): TModule;
-}
-
-// TODO: figure out how to better unify this
-
-export class HttpModuleFacetBuilder extends HttpFacetBuilderBase<IModule> {
-  transform(m: IModule): IModule {
-    return { ...m, controllers: this._controllers, interceptors: this._interceptors };
+  transform(m: TModule): TModule {
+    // TODO:  this is the first time I've ever used @ts-ignore and it shouldn't be
+    //        I can't for the life of me tell what the problem here is, but it's
+    //        something to do with my module augmentation.
+    return {
+      ...m,
+      // @ts-ignore
+      controllers: this._controllers.length > 0 ? this._controllers : undefined,
+      interceptors: this._interceptors.length > 0 ? this._interceptors : undefined,
+    };
   }
+}
+export class HttpModuleFacetBuilder extends HttpFacetBuilderBase<IModule> {
 }
 
 export class HttpAppSpecFacetBuilder extends HttpFacetBuilderBase<IAppSpec> {
-  transform(m: IAppSpec): IAppSpec {
-    return { ...m, controllers: this._controllers, interceptors: this._interceptors };
-  }
 }
 
 export function Http(): HttpModuleFacetBuilder {

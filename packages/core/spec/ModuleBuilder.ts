@@ -8,8 +8,8 @@ import {
 } from '@stockade/inject/domain';
 import { DependencyKey } from '@stockade/inject/domain/dependency-utils';
 
-import { CoreError } from '../../errors';
-import { FacetBuilderBase } from '../facets';
+import { CoreError } from '../errors';
+import { FacetBuilderBase } from './FacetBuilderBase';
 import { IModule, isStockadeModule } from './IModule';
 
 export abstract class ModuleBuilderBase<TModule extends IModule> {

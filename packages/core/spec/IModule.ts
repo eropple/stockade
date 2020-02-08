@@ -23,6 +23,15 @@ export interface IModule extends IDomainDefinition {
   readonly dynamicProviders?: DynamicProviderFn;
 }
 
+export interface IAppSpec extends IModule {
+  readonly $isStockadeAppSpec: true;
+}
+
 export function isStockadeModule(o: unknown): o is IModule {
   return (o as any).$isStockadeModule;
 }
+
+export function isAppSpec(o: unknown): o is IAppSpec {
+  return (o as any).$isStockadeAppSpec;
+}
+

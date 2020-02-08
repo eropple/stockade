@@ -15,6 +15,7 @@ const app =
 
 const runner = new HttpRunner(app, {});
 runner.run().then(() => {
+  console.log(runner.appSpec);
   runner.logger.info('success! (exiting)');
 }).catch((err) => {
   runner.logger.error({ err }, 'failure! (exiting)');

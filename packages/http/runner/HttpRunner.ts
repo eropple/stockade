@@ -1,7 +1,7 @@
 import * as Fastify from 'fastify';
-import uuidV4 from 'uuid/v4';
+import * as hyperid from 'hyperid';
 
-import { AppSpecBuilder, IAppSpec, IModule } from '@stockade/core';
+import { AppSpecBuilder, IAppSpec } from '@stockade/core';
 import { BaseRunner, IRunnerBehavior } from '@stockade/core/runner';
 
 import { IHttpOptions } from './IHttpOptions';
@@ -29,7 +29,7 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
   protected doStart(): Promise<any> {
     const fastifyListenOptions = this._prepareFastifyListenOptions(this.options);
     this.logger.debug({ fastifyListenOptions }, 'Fastify listen options.');
-    this.logger.info(`Starting Fastify on port '${fastifyListenOptions.port}`);
+    this.logger.info(`Starting Fastify on port ${fastifyListenOptions.port}.`);
 
     return this.fastify.listen(fastifyListenOptions);
   }
@@ -40,9 +40,9 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
 
   private _prepareFastifyServerOptions(opts: IHttpOptions): Fastify.ServerOptions {
     const childLogger = this.logger.child({ component: 'Fastify' });
-    (childLogger as any).genReqId = uuidV4;
-
     const ret = opts?.fastify?.server ?? {};
+
+    (ret as any).genReqId = () => hyperid.default({ fixedLength: true }).uuid;
     ret.logger = childLogger;
 
     return ret;

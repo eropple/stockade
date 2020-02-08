@@ -1,3 +1,4 @@
-export * from './app-spec';
-export * from './module';
-export * from './facets';
+export * from './AppSpecBuilder';
+export * from './FacetBuilderBase';
+export * from './IModule';
+export * from './ModuleBuilder';

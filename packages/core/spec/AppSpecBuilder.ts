@@ -1,6 +1,6 @@
-import { FacetBuilderBase } from '../facets';
-import { ModuleBuilderBase } from '../module';
-import { IAppSpec } from './IAppSpec';
+import { FacetBuilderBase } from './FacetBuilderBase';
+import { IAppSpec } from './IModule';
+import { ModuleBuilderBase } from './ModuleBuilder';
 
 export class AppSpecBuilder extends ModuleBuilderBase<IAppSpec> {
   readonly $isStockadeAppSpecBuilder: true = true;
