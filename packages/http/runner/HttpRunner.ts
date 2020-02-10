@@ -14,7 +14,7 @@ const HTTP_BEHAVIOR: IRunnerBehavior = {
 };
 
 export class HttpRunner extends BaseRunner<IHttpOptions> {
-  private readonly fastify: Fastify.FastifyInstance;
+  readonly fastify: Fastify.FastifyInstance;
 
   constructor(
     appSpec: IAppSpec | AppSpecBuilder,
@@ -62,7 +62,13 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
     this.logger.debug({ fastifyServerOptions }, 'Creating Fastify instance.');
     const fastify = Fastify.default(fastifyServerOptions);
 
+    if (this.options.fastify?.preConfigure) {
+      this.options.fastify.preConfigure(fastify);
+    }
 
+    if (this.options.fastify?.postConfigure) {
+      this.options.fastify.postConfigure(fastify);
+    }
 
     return fastify;
   }
