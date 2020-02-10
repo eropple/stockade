@@ -2,21 +2,6 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "files.exclude": {
     "jest.config.js": false,
-    "jest.config.base.js": false,
-    "**/node_modules/": true,
-    "**/out/": true,
-    "**/build/": true,
-    "**/dist/": true,
-    "**/coverage/": true,
-    "**/tmp/": true,
-    "**/*.log": true,
-    "**/*.jsonl": true,
-    "**/*.tsbuildinfo": true,
-    "**/*.d.ts": true,
-    "**/*.js": true,
-    "**/*.js.map": true,
-    "**/jest.config.js": false,
-    "**/jest.config.base.js": false,
-    "**/__*.d.ts": false
+    "jest.config.base.js": false
   }
 }

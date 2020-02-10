@@ -22,9 +22,7 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
   ) {
     super(HTTP_BEHAVIOR, appSpec, options);
 
-    const fastifyServerOptions: Fastify.ServerOptions = this._prepareFastifyServerOptions(options);
-    this.logger.debug({ fastifyServerOptions }, 'Creating Fastify instance.');
-    this.fastify = Fastify.default(fastifyServerOptions);
+    this.fastify = this._buildFastify();
   }
   protected doStart(): Promise<any> {
     const fastifyListenOptions = this._prepareFastifyListenOptions(this.options);
@@ -42,7 +40,10 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
     const childLogger = this.logger.child({ component: 'Fastify' });
     const ret = opts?.fastify?.server ?? {};
 
-    (ret as any).genReqId = () => hyperid.default({ fixedLength: true }).uuid;
+    (ret as any).genReqId =
+      (ret as any).genReqId ?? (() => hyperid.default({ fixedLength: true }).uuid);
+
+    // End users can't override this. Some things need to be sane.
     ret.logger = childLogger;
 
     return ret;
@@ -54,5 +55,15 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
     ret.port = ret.port ?? DEFAULT_HTTP_PORT;
 
     return ret;
+  }
+
+  private _buildFastify(): Fastify.FastifyInstance {
+    const fastifyServerOptions: Fastify.ServerOptions = this._prepareFastifyServerOptions(this.options);
+    this.logger.debug({ fastifyServerOptions }, 'Creating Fastify instance.');
+    const fastify = Fastify.default(fastifyServerOptions);
+
+
+
+    return fastify;
   }
 }

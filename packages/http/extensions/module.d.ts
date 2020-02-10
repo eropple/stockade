@@ -6,7 +6,7 @@ import {
 } from '@stockade/core';
 import { IDomainDefinition } from '@stockade/inject';
 
-import { IInterceptorDefinitionArg } from '../interceptors';
+import { IFastifyHookDefinitionArg } from '../hooks';
 
 // THIS IS EXTREMELY IMPORTANT
 // TypeScript module augmentation is extremely touchy. If you don't precisely
@@ -29,14 +29,13 @@ declare module '@stockade/core' {
     controllers?: ReadonlyArray<Class<any>>;
 
     /**
-     * Specifies HTTP interceptors to be registered into the router. Interceptors
-     * will be called in _weighted_ order; interceptors that are specified without
-     * a weight have a default weight of 0 and so will be sorted in order of appending
-     * (uses a stable sort).
+     * Specifies classes that implement Fastify hooks. Fastify hooks touch on
+     * many parts of the request lifecycle and this provides them with dependency
+     * injection.
      *
      * TODO: Find a good stable sort for these.
      */
-    interceptors?: ReadonlyArray<IInterceptorDefinitionArg>;
+    hooks?: ReadonlyArray<IFastifyHookDefinitionArg>;
   }
 }
 
