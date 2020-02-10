@@ -1,11 +1,15 @@
 import * as Fastify from 'fastify';
 import * as hyperid from 'hyperid';
+import { Class } from 'utility-types';
 
-import { AppSpecBuilder, IAppSpec } from '@stockade/core';
+import { AppSpecBuilder, IAppSpec, mapModules } from '@stockade/core';
 import { BaseRunner, IRunnerBehavior } from '@stockade/core/runner';
 
+import { IFastifyHookDefinition } from '../hooks';
+import { isHttpModule } from '../IHttpModule';
 import { IHttpOptions } from './IHttpOptions';
 import { HTTP } from './lifecycle';
+import { findControllers, findHooks } from './utils';
 
 const DEFAULT_HTTP_PORT = 10080;
 
@@ -62,11 +66,27 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
     this.logger.debug({ fastifyServerOptions }, 'Creating Fastify instance.');
     const fastify = Fastify.default(fastifyServerOptions);
 
+    const controllers = findControllers(this.appSpec);
+    this.logger.debug({ controllerClassNames: controllers.map(c => c.name )}, `${controllers.length} controllers found.`);
+    const hooks = findHooks(this.appSpec);
+    this.logger.debug({ hookClassNames: hooks.map(h => h.class.name )}, `${controllers.length} controllers found.`);
+
     if (this.options.fastify?.preConfigure) {
+      this.logger.debug('Running Fastify preconfigure.');
       this.options.fastify.preConfigure(fastify);
     }
 
+    // TODO:  Take the sorted set of hooks and apply them
+    //        - Each hook class should implement the interfaces in `fastify-hook-interfaces.ts`
+    //        - Sort them into lists of classes that implement each hook
+    //        - Add a _separate_ event handler for each class that requests it from the server
+    //          lifecycle (which will re-use created hooks if they implement multiple hooks in
+    //          the same class) and proxy the Fastify event args to it
+
+    // TODO:  Take all controllers and route them
+
     if (this.options.fastify?.postConfigure) {
+      this.logger.debug('Running Fastify postconfigure.');
       this.options.fastify.postConfigure(fastify);
     }
 

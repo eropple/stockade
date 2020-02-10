@@ -8,7 +8,7 @@ import * as http from 'http';
 /**
  * Implements a hook that is triggered when a request is initially received
  */
-export interface IOnRequest {
+export interface IOnRequestHook {
   onRequest(
     req: FastifyRequest,
     reply: FastifyReply<http.ServerResponse>,
@@ -19,7 +19,7 @@ export interface IOnRequest {
  * Implements a hook that is triggered after the onRequest hook and middlewares,
  * but before body parsing
  */
-export interface IPreParsing {
+export interface IPreParsingHook {
   preParsing(
     req: FastifyRequest,
     reply: FastifyReply<http.ServerResponse>,
@@ -30,7 +30,7 @@ export interface IPreParsing {
  * Implements a hook that is triggered after the onRequest, middlewares, and
  * body parsing, but before the validation
  */
-export interface IPreValidation {
+export interface IPreValidationHook {
   preValidation(
     req: FastifyRequest,
     reply: FastifyReply<http.ServerResponse>,
@@ -41,7 +41,7 @@ export interface IPreValidation {
  * Implements a hook that is fired after a request is processed, but before the
  * response is serialized hook
  */
-export interface IPreSerialization {
+export interface IPreSerializationHook {
   preSerialization(
     req: FastifyRequest,
     reply: FastifyReply<http.ServerResponse>,
@@ -53,7 +53,7 @@ export interface IPreSerialization {
 /**
  * Implements a hook that is fired if `reply.send` is invoked with an Error
  */
-export interface IOnError {
+export interface IOnErrorHook {
   onError(
     instance: FastifyInstance,
   ): Promise<void>;
@@ -63,7 +63,7 @@ export interface IOnError {
  * Implements a hook that is fired after a request is processed, but before the
  * "onResponse" hook
  */
-export interface IOnSend {
+export interface IOnSendHook {
   onSend(
     instance: FastifyInstance,
   ): Promise<void>;
@@ -73,7 +73,7 @@ export interface IOnSend {
  * Implements a hook that is called when a response is about to be sent to a
  * client
  */
-export interface IOnResponse {
+export interface IOnResponseHook {
   onResponse(
     req: FastifyRequest,
     reply: FastifyReply<http.ServerResponse>,

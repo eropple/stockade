@@ -13,7 +13,11 @@ const app =
       HttpApp(),
     );
 
-const runner = new HttpRunner(app, {});
+const runner = new HttpRunner(app, {
+  logging: {
+    level: 'debug',
+  },
+});
 runner.run().then(() => {
   console.log(runner.appSpec);
   runner.logger.info('success! (exiting)');

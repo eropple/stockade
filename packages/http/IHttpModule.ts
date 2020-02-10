@@ -4,6 +4,9 @@ import { IModule, isStockadeModule } from '@stockade/core';
 
 import { IFastifyHookDefinitionArg } from './hooks';
 
+/**
+ * Superset of the standard Stockade module in order to extend it for HTTP.
+ */
 export interface IHttpModule extends IModule {
   $isStockadeHttpModule: true;
 
@@ -17,9 +20,16 @@ export interface IHttpModule extends IModule {
   /**
    * Specifies classes that implement Fastify hooks. Fastify hooks touch on
    * many parts of the request lifecycle and this provides them with dependency
-   * injection.
+   * injection. You can find interfaces that let you implement these hooks in
+   * `packages/http/hooks/fastify-hook-interfaces.ts`.
    *
-   * TODO: Find a good stable sort for these.
+   * @see [IOnRequestHook]
+   * @see [IPreParsingHook]
+   * @see [IPreValidationHook]
+   * @see [IPreSerializationHook]
+   * @see [IOnErrorHook]
+   * @see [IOnSendHook]
+   * @see [IOnResponseHook]
    */
   hooks?: ReadonlyArray<IFastifyHookDefinitionArg>;
 }

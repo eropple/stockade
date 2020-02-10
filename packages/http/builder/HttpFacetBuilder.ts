@@ -4,6 +4,7 @@ import { FacetBuilderBase } from '@stockade/core/spec/FacetBuilderBase';
 import { IAppSpec, IModule } from '@stockade/core/spec/IModule';
 
 import { IFastifyHookDefinitionArg } from '../hooks';
+import { IHttpModule } from '../IHttpModule';
 
 export abstract class HttpFacetBuilderBase<
   TModule extends IModule,
@@ -23,23 +24,21 @@ export abstract class HttpFacetBuilderBase<
     return this;
   }
 
-  transform(m: TModule): TModule {
+  transform(m: TModule): (TModule & IHttpModule) {
     // TODO:  this is the first time I've ever used @ts-ignore and it shouldn't be
     //        I can't for the life of me tell what the problem here is, but it's
     //        something to do with my module augmentation.
-    const ret = {
+    const ret: TModule & IHttpModule = {
       ...m,
-      // @ts-ignore
-      controllers: this._controllers,
-      hooks: this._hooks,
+      $isStockadeHttpModule: true,
     };
 
-    if (ret.controllers.length === 0) {
-      delete ret.controllers;
+    if (this._controllers.length > 0) {
+      ret.controllers = this._controllers;
     }
 
-    if (ret.hooks.length === 0) {
-      delete ret.hooks;
+    if (this._hooks.length > 0) {
+      ret.hooks = this._hooks;
     }
 
     return ret;
