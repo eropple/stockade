@@ -1,14 +1,13 @@
 import * as Fastify from 'fastify';
 import * as hyperid from 'hyperid';
-import { Class } from 'utility-types';
 
 import { AppSpecBuilder, IAppSpec, mapModules } from '@stockade/core';
 import { BaseRunner, IRunnerBehavior } from '@stockade/core/runner';
+import { LifecycleInstance } from '@stockade/inject';
 
-import { IFastifyHookDefinition } from '../hooks';
-import { isHttpModule } from '../IHttpModule';
+import '../extensions/fastify';
 import { IHttpOptions } from './IHttpOptions';
-import { HTTP } from './lifecycle';
+import { HTTP, HTTP_REQUEST } from './lifecycle';
 import { findControllers, findHooks } from './utils';
 
 const DEFAULT_HTTP_PORT = 10080;
@@ -70,6 +69,15 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
     this.logger.debug({ controllerClassNames: controllers.map(c => c.name )}, `${controllers.length} controllers found.`);
     const hooks = findHooks(this.appSpec);
     this.logger.debug({ hookClassNames: hooks.map(h => h.class.name )}, `${controllers.length} controllers found.`);
+
+    // this hook is added to the server first because it needs to run at start to attach the
+    // lifecycle used by other stuff.
+    fastify.addHook('onRequest', (req) => {
+      req.$stockade = {
+        lifecycleInstance: new LifecycleInstance(HTTP_REQUEST, this.lifecycle, this.logger),
+      };
+      console.log(req);
+    });
 
     if (this.options.fastify?.preConfigure) {
       this.logger.debug('Running Fastify preconfigure.');
