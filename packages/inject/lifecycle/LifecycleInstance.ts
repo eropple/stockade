@@ -1,11 +1,12 @@
 import AsyncLock from 'async-lock';
 import { serializeError } from 'serialize-error';
+import { Class } from 'utility-types';
 
 import { prettyPrintKeys } from '@stockade/utils/conversions';
 import { Logger } from '@stockade/utils/logging';
 
 import { Domain, DomainProvider, isDomainFactoryProvider, isDomainValueProvider } from '../domain';
-import { prettyPrintProviders } from '../domain/utils';
+import { extractInjectedParameters, prettyPrintProviders } from '../domain/utils';
 import { CircularDependencyError, DependencyCreationError, DependencyNotSatisfiedError } from './errors';
 import { ILifecycle } from './lifecycles';
 
@@ -16,6 +17,8 @@ import { ILifecycle } from './lifecycles';
  *  will be invoked at the end of a lifecycle.
  */
 export class LifecycleInstance {
+  private static _classInjectCache: Map<Class<any>, ReadonlyArray<symbol>> = new Map();
+
   //  TODO: change the LifecycleInstance into an iterative solver
   //        For most use cases, a recursive, stack-based solver is fine. It's
   //        got the possibility of smashing a stack, though, and there's probably
@@ -171,6 +174,11 @@ export class LifecycleInstance {
         return provider.value;
       }
 
+      // TODO:  decide if we want to push class providers down from the domain
+      //        We have a class inject cache as a static object in `LifecycleInstance`
+      //        because we need to resolve dependencies for non-provided classes
+      //        (controllers and hooks in HTTP, etc.)--do we want to stop unwrapping
+      //        class providers in `Domain` and do that here?
       if (isDomainFactoryProvider(provider)) {
         // Since we lock in resolve(), doing this as a Promise.all is safe.
         const args = await Promise.all(
@@ -197,5 +205,21 @@ export class LifecycleInstance {
         err,
       );
     }
+  }
+
+  async instantiate<T = any>(
+    cls: Class<any>,
+    domain: Domain,
+  ): Promise<T> {
+    let injects: ReadonlyArray<symbol> | undefined = LifecycleInstance._classInjectCache.get(cls);
+
+    if (!injects) {
+      injects = extractInjectedParameters(cls);
+      LifecycleInstance._classInjectCache.set(cls, injects);
+    }
+
+    const resolvedInjects = await Promise.all(injects.map(i => this.resolve(i, domain)));
+
+    return new cls(...resolvedInjects);
   }
 }

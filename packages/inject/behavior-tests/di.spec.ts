@@ -103,6 +103,33 @@ describe('integrated DI tests', () => {
       expect(obj.dep.constructor).toBe(Dep);
     });
 
+    it('should `instantiate` a class based on a domain', async () => {
+      @AutoComponent({ lifecycle: GLOBAL })
+      class Dep {}
+
+      const domain = Domain.fromDefinition({
+        name: 'test',
+        provides: [
+          bind('a').in(GLOBAL).toValue(5),
+          Dep,
+        ],
+      });
+
+      class Instantiated {
+        constructor(
+          @Inject('a') readonly a: number,
+          readonly dep: Dep,
+        ) {}
+      }
+
+      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const obj = await lifecycle.instantiate(Instantiated, domain);
+
+      expect(obj.constructor).toBe(Instantiated);
+      expect(obj.a).toBe(5);
+      expect(obj.dep.constructor).toBe(Dep);
+    });
+
     it('should cache within a lifecycle', async () => {
       let x = 1;
 
