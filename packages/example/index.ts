@@ -1,5 +1,5 @@
 import { App, Module } from '@stockade/core';
-import { Http, HttpApp, HttpRunner } from '@stockade/http';
+import { Http, HttpApp } from '@stockade/http';
 
 const app =
   App()
@@ -13,14 +13,14 @@ const app =
       HttpApp(),
     );
 
-const runner = new HttpRunner(app, {
-  logging: {
-    level: 'debug',
-  },
-});
-runner.run().then(() => {
-  console.log(runner.appSpec);
-  runner.logger.info('success! (exiting)');
-}).catch((err) => {
-  runner.logger.error({ err }, 'failure! (exiting)');
-});
+// const runner = new HttpRunner(app, {
+//   logging: {
+//     level: 'debug',
+//   },
+// });
+// runner.run().then(() => {
+//   console.log(runner.appSpec);
+//   runner.logger.info('success! (exiting)');
+// }).catch((err) => {
+//   runner.logger.error({ err }, 'failure! (exiting)');
+// });

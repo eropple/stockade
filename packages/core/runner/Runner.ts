@@ -1,5 +1,5 @@
 import {
-  LifecycleInstance, SINGLETON,
+  Domain, LifecycleInstance, SINGLETON,
 } from '@stockade/inject';
 import { createLogger, Logger } from '@stockade/utils/logging';
 import { sleepAsync } from '@stockade/utils/sleep';
@@ -7,8 +7,7 @@ import { sleepAsync } from '@stockade/utils/sleep';
 import { CoreError } from '../errors';
 import { GLOBAL_LIFECYCLE } from '../global';
 import { AppSpecBuilder, IAppSpec, isAppSpecBuilder } from '../spec';
-import { IBaseOptions } from './IBaseOptions';
-import { IRunnerBehavior } from './IRunnerBehavior';
+import { IRunnerOptions } from './IRunnerOptions';
 
 const RUN_WAIT_MS = 100;
 const EXIT_CODE_WHEN_STOP_FAILS = 33;
@@ -21,9 +20,7 @@ export enum RunnerStatus {
   STOPPED = 'stopped',
 }
 
-export abstract class BaseRunner<
-  TOptions extends IBaseOptions,
-> {
+export class Runner {
   private _status: RunnerStatus = RunnerStatus.CREATED;
   get status() { return this._status; }
 
@@ -31,41 +28,29 @@ export abstract class BaseRunner<
   private readonly _logger: Logger;
   get logger() { return this._logger; }
 
-  private readonly _singletonLifecycle: LifecycleInstance;
-  /**
-   * The lifecycle that represents the core DI cycle for the application. While
-   * components can use the `SINGLETON` lifecycle, the lifecycle here is the one
-   * that indicates that the application is running in the context of a particular
-   * runner (HTTP, task, CLI, etc.).
-   */
-  protected readonly lifecycle: LifecycleInstance;
+  readonly diDomain: Domain;
+  private readonly _singletonLifecycleInstance: LifecycleInstance;
 
   readonly appSpec: IAppSpec;
 
   constructor(
-    behavior: IRunnerBehavior,
     appSpec: IAppSpec | AppSpecBuilder,
-    protected readonly options: TOptions,
+    protected readonly options: IRunnerOptions,
   ) {
     this._baseLogger = createLogger(this.options.logging ?? {});
     this._logger = this._baseLogger.child({ component: this.constructor.name });
 
-    this._logger.info('Initializing base runner.');
+    this._logger.info('Initializing runner.');
 
     this.appSpec = isAppSpecBuilder(appSpec) ? appSpec.build() : appSpec;
 
-    this._singletonLifecycle =
+    this.diDomain = Domain.fromDefinition(this.appSpec, null);
+    this._singletonLifecycleInstance =
       new LifecycleInstance(SINGLETON, GLOBAL_LIFECYCLE, this._baseLogger);
-    this.lifecycle =
-      new LifecycleInstance(behavior.baseLifecycle, this._singletonLifecycle, this._baseLogger);
   }
-
-  protected abstract async doStart(): Promise<any>;
-  protected abstract async doStop(): Promise<any>;
 
   private async start(): Promise<void> {
     this._status = RunnerStatus.STARTING;
-    await this.doStart();
     this._status = RunnerStatus.RUNNING;
   }
 
@@ -96,7 +81,6 @@ export abstract class BaseRunner<
     this._logger.info('Stopping runner.');
 
     this._status = RunnerStatus.STOPPING;
-    await this.doStop();
     this._status = RunnerStatus.STOPPED;
 
     this._logger.info('Runner has stopped.');

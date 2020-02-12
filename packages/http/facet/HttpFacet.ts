@@ -1,9 +1,9 @@
 import * as Fastify from 'fastify';
 import * as hyperid from 'hyperid';
 
-import { AppSpecBuilder, IAppSpec, mapModules } from '@stockade/core';
-import { BaseRunner, IRunnerBehavior } from '@stockade/core/runner';
-import { LifecycleInstance } from '@stockade/inject';
+import { FacetBase, IAppSpec, IFacetBehavior } from '@stockade/core';
+import { Domain, LifecycleInstance } from '@stockade/inject';
+import { Logger } from '@stockade/utils/logging';
 
 import '../extensions/fastify';
 import { IHttpOptions } from './IHttpOptions';
@@ -12,18 +12,21 @@ import { findControllers, findHooks } from './utils';
 
 const DEFAULT_HTTP_PORT = 10080;
 
-const HTTP_BEHAVIOR: IRunnerBehavior = {
-  baseLifecycle: HTTP,
+const HTTP_BEHAVIOR: IFacetBehavior = {
+  facetRootLifecycle: HTTP,
 };
 
-export class HttpRunner extends BaseRunner<IHttpOptions> {
+export class HttpFacet extends FacetBase {
   readonly fastify: Fastify.FastifyInstance;
 
   constructor(
-    appSpec: IAppSpec | AppSpecBuilder,
-    options: IHttpOptions,
+    logger: Logger,
+    parentLifecycleInstance: LifecycleInstance,
+    appSpec: IAppSpec,
+    domain: Domain,
+    private readonly options: IHttpOptions,
   ) {
-    super(HTTP_BEHAVIOR, appSpec, options);
+    super(logger, parentLifecycleInstance, appSpec, domain, HTTP_BEHAVIOR);
 
     this.fastify = this._buildFastify();
   }
@@ -74,7 +77,7 @@ export class HttpRunner extends BaseRunner<IHttpOptions> {
     // lifecycle used by other stuff.
     fastify.addHook('onRequest', (req) => {
       req.$stockade = {
-        lifecycleInstance: new LifecycleInstance(HTTP_REQUEST, this.lifecycle, this.logger),
+        lifecycleInstance: new LifecycleInstance(HTTP_REQUEST, this.lifecycleInstance, this.logger),
       };
       console.log(req);
     });

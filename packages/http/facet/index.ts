@@ -1,3 +1,3 @@
-export * from './HttpRunner';
+export * from './HttpFacet';
 export * from './IHttpOptions';
 export * from './lifecycle';
