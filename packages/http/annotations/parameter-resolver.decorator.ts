@@ -9,6 +9,8 @@ export interface IParameterResolverArgs<T = any> {
   friendlyName: string;
   inject: ReadonlyArray<DependencyKey>;
   fn: (...args: Array<any>) => Promise<T>;
+
+  [extraArgs: string]: any;
 }
 
 export function ParameterResolver({ friendlyName, inject, fn }: IParameterResolverArgs): ParameterDecorator {

@@ -2,6 +2,7 @@ import { HTTPMethod } from 'fastify';
 
 import { IModule } from '@stockade/core';
 import { Domain } from '@stockade/inject';
+import { SchemaWithClassTypes } from '@stockade/schemas';
 import { IParameterMetadata, RETURN_DESIGN_TYPE } from '@stockade/utils/metadata';
 
 import { AnnotationKeys } from '../annotations/keys';
@@ -70,11 +71,50 @@ export interface IMethodWithBodyOptions extends IMethodOptions {
   contentType?: string;
 }
 
+// spoilers: these are just OAS3
+export interface IMappedEndpointPathParameter {
+  name: string;
+  in: 'path';
+  description?: string;
+  required: true;
+  deprecated?: boolean;
+  style?: 'simple',
+  schema: SchemaWithClassTypes;
+}
+
+export interface IMappedEndpointQueryParameter {
+  name: string;
+  in: 'query',
+  description?: string;
+  required?: boolean;
+  deprecated?: boolean;
+  style?: 'form';
+  schema: SchemaWithClassTypes;
+}
+
+export interface IMappedEndpointHeaderParameter {
+  name: Exclude<string, 'Accept' | 'Content-Type' | 'Authorization' | 'accept' | 'content-type' | 'authorization'>;
+  in: 'header';
+  description?: string;
+  required?: boolean;
+  deprecated?: boolean;
+  style?: 'simple';
+  schema: SchemaWithClassTypes;
+}
+
+// TODO: support cookies
+export type MappedEndpointParameter =
+  | IMappedEndpointPathParameter
+  | IMappedEndpointQueryParameter
+  | IMappedEndpointQueryParameter
+  ;
+
 export interface IMappedEndpointBasic {
   readonly [AnnotationKeys.ROUTE_METHOD]: HTTPMethod;
   readonly [AnnotationKeys.ROUTE_PATH]: string;
   readonly [AnnotationKeys.HOOKS]?: ReadonlyArray<FastifyHookClass>;
   readonly [AnnotationKeys.ROUTE_OPTIONS]: IMethodOptions | IMethodWithBodyOptions;
+  readonly [AnnotationKeys.EXPLICIT_PARAMETERS]?: Array<any>;
   readonly [RETURN_DESIGN_TYPE]?: Function;
 
   readonly [extraKey: string]: any;

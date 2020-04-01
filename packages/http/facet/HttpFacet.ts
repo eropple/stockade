@@ -18,16 +18,18 @@ import {
   IPreSerializationHook,
   IPreValidationHook,
 } from '../hooks';
-import { CONTROLLERS, REPLY, REQUEST } from '../inject-keys';
+import { CONTROLLERS, REPLY, REQUEST, SCHEMATIZER } from '../inject-keys';
 import { stripPathSlashes } from '../utils';
 import {
   buildMappedControllerInfo,
   IMappedController,
   IMappedEndpointDetailed,
   IParameterResolver,
+  MappedEndpointParameter,
 } from './controller-info';
 import { IHttpOptions } from './IHttpOptions';
 import { HTTP, HTTP_REQUEST } from './lifecycle';
+import { buildSchematizer } from './schemas';
 import { extractHooks, findControllers, findHooks } from './utils';
 
 const DEFAULT_HTTP_PORT = 10080;
@@ -338,8 +340,12 @@ export class HttpFacet extends FacetBase {
   }
 
   private _bindRoutesToControllers(fastifyBase: Fastify.FastifyInstance): void {
-    // TODO:  Take all controllers and route them
     console.log(require('util').inspect(this._allControllers, false, null, true));
+
+    // this will provide the schematizer for use in other systems, like an OpenAPI generator
+    const schematizer = buildSchematizer(this.logger, this._allControllers);
+    this.lifecycleInstance.registerTemporary(SCHEMATIZER, schematizer);
+
     for (const controllerInfo of this._allControllers) {
       const controller = controllerInfo.controller;
       const controllerName = controller.name;
@@ -365,6 +371,8 @@ export class HttpFacet extends FacetBase {
           const endpointPath = endpointInfo[AnnotationKeys.ROUTE_PATH];
           const endpointOptions = endpointInfo[AnnotationKeys.ROUTE_OPTIONS];
           const method = endpointInfo[AnnotationKeys.ROUTE_METHOD];
+          const explicitParameters: Array<MappedEndpointParameter> =
+            endpointInfo[AnnotationKeys.EXPLICIT_PARAMETERS] ?? [];
           const url = `/${stripPathSlashes(controllerPathBase)}/${stripPathSlashes(endpointPath)}`;
 
           const endpointParameterResolvers: Array<IParameterResolver> =

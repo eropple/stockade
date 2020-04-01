@@ -25,7 +25,7 @@ export const PARAMETER_DESIGN_TYPE = 'design:paramtype';
 export const RETURN_DESIGN_TYPE = 'design:returntype';
 
 export interface IParameterMetadata {
-  [PARAMETER_DESIGN_TYPE]?: Function;
+  [PARAMETER_DESIGN_TYPE]?: Class<any>;
 
   [key: string]: any;
 }

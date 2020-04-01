@@ -2,7 +2,7 @@ import { JSONSchema7 } from 'json-schema';
 import 'source-map-support';
 
 import { Model, ModelRaw, Prop, PropRaw } from './annotations';
-import { Schematizer } from './unroller';
+import { Schematizer } from './schematizer';
 
 describe('behavior tests', () => {
   describe('ModelRaw', () => {
@@ -23,7 +23,8 @@ describe('behavior tests', () => {
       const rootSchema: JSONSchema7 = {};
       const schematizer = new Schematizer();
       schematizer.registerClass(ModelRawTest);
-      schematizer.insertSchemasIntoObject(rootSchema, '#/definitions');
+      const document = schematizer.makeDocumentInstance('#/definitions');
+      document.insertSchemasIntoObject(rootSchema);
 
       const outSchema = rootSchema.definitions!.ModelRawTest;
 
@@ -50,7 +51,8 @@ describe('behavior tests', () => {
       const rootSchema: JSONSchema7 = {};
       const schematizer = new Schematizer();
       schematizer.registerClass(ModelRawIgnorePropRawTest);
-      schematizer.insertSchemasIntoObject(rootSchema, '#/definitions');
+      const document = schematizer.makeDocumentInstance('#/definitions');
+      document.insertSchemasIntoObject(rootSchema);
       const outSchema = rootSchema.definitions!.ModelRawIgnorePropRawTest;
 
       expect(outSchema).toMatchObject(jsonSchema);
@@ -84,7 +86,8 @@ describe('behavior tests', () => {
       const rootSchema: JSONSchema7 = {};
       const schematizer = new Schematizer();
       schematizer.registerClass(ModelWithPropRaw);
-      schematizer.insertSchemasIntoObject(rootSchema, '#/definitions');
+      const document = schematizer.makeDocumentInstance('#/definitions');
+      document.insertSchemasIntoObject(rootSchema);
       const outSchema = rootSchema.definitions!.ModelWithPropRaw as JSONSchema7;
 
       expect(outSchema.properties!.foo).toMatchObject(propFooSchema);
@@ -107,7 +110,8 @@ describe('behavior tests', () => {
       const rootSchema: JSONSchema7 = {};
       const schematizer = new Schematizer();
       schematizer.registerClass(ModelWithPropIgnore);
-      schematizer.insertSchemasIntoObject(rootSchema, '#/definitions');
+      const document = schematizer.makeDocumentInstance('#/definitions');
+      document.insertSchemasIntoObject(rootSchema);
       const outSchema = rootSchema.definitions!.ModelWithPropIgnore as JSONSchema7;
 
       expect(outSchema.properties!.foo).toMatchObject(propFooSchema);
@@ -123,7 +127,8 @@ describe('behavior tests', () => {
       const rootSchema: JSONSchema7 = {};
       const schematizer = new Schematizer();
       schematizer.registerClass(ModelWithOverriddenName);
-      schematizer.insertSchemasIntoObject(rootSchema, '#/definitions');
+      const document = schematizer.makeDocumentInstance('#/definitions');
+      document.insertSchemasIntoObject(rootSchema);
       const outSchema = rootSchema.definitions!.ModelActualName as JSONSchema7;
 
       expect(outSchema).not.toBeUndefined();

@@ -13,4 +13,5 @@ export const AnnotationKeys = Object.freeze({
 
   // parameters
   PARAMETER_RESOLVER: '@stockade/http:PARAMETER_RESOLVER' as const,
-});
+  EXPLICIT_PARAMETERS: '@stockade/HTTP:EXPLICIT_PARAMETERS' as const,
+} as const);

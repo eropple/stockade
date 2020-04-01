@@ -34,7 +34,8 @@
     "utility-types": "3.10.0"
   },
   "peerDependencies": {
-    "@stockade/core": "0.1.0"
+    "@stockade/core": "0.1.0",
+    "@stockade/schemas": "0.1.0"
   },
   "devDependencies": {
     "@stockade/core": "0.1.0",

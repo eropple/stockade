@@ -5,7 +5,6 @@ import { isArray } from 'util';
 import { Class, DeepReadonly } from 'utility-types';
 
 import { FallbackLogger } from '@stockade/utils/logging';
-import { getAllMetadataForClass, getAllPropertyMetadataForClass } from '@stockade/utils/metadata';
 import { StringTo } from '@stockade/utils/types';
 
 import {
@@ -15,51 +14,53 @@ import {
   getRawModelSchema,
   getRawPropSchema,
   shouldIgnoreProp,
-  } from './annotations';
-import { InferenceError, SchemasError } from './errors';
-import { IModelMetaInfo, InferredScalarProperties, JSONReference, Schema, SchemaWithClassTypes } from './types';
-
-function getModelName(cls: Class<any>) {
-  const modelMeta = getModelMeta(cls);
-  if (!modelMeta) {
-    throw new SchemasError(`No MODEL_META for class '${cls.name}'. Add a @Model or @ModelRaw annotation.`);
-  }
-
-  return modelMeta.name ?? cls.name;
-}
+  } from '../annotations';
+import { InferenceError, SchemasError } from '../errors';
+import { IModelMetaInfo, InferredScalarProperties, JSONReference, Schema, SchemaWithClassTypes } from '../types';
+import { SchematizedDocumentInstance } from './schematized-document-instance';
+import { getModelName } from './utils';
 
 /**
- * `Schematizer` accepts a set of target schema and attempts to walk them, generating a
- * set of JSON schemas and useful relations within them. These can then be turned into
- * valid JSON schema or stored in some other format (i.e., while JSON Schema typically
- * will store related schemas as a reference to `#/definitions/MySchema`, OpenAPI stores
- * them as a reference to `#/components/schemas/MySchema`).
+ * `Schematizer` accepts a set of target schema and attempts to walk them,
+ * generating a set of JSON schemas and useful relations within them. These can
+ * then be turned into valid JSON schema or stored in some other format (i.e.,
+ * while JSON Schema typically will store related schemas as a reference to
+ * `#/definitions/MySchema`, OpenAPI stores them as a reference to
+ * `#/components/schemas/MySchema`).
  *
- * This is a bit of a stateful monster. Be sure to read the method documentation before
- * you try to use it, or it _will_ bite your head off.
+ * This is a bit of a stateful monster and it's a little awkward because it
+ * has to support passing data out of itself. Be sure to read the method
+ * documentation before you try to use it, or it _will_ bite your head off.
  */
 export class Schematizer {
   private readonly logger: Logger;
 
   /**
-   * All named sub-schemas found in the process of schematizing anything fed into the schematizer.
-   * If the schematizer finds a class somewhere in the hierarchy that class shall itself be
-   * schematized and stored here for reconstruction later.
+   * All named sub-schemas found in the process of schematizing anything fed
+   * into the schematizer. If the schematizer finds a class somewhere in the
+   * hierarchy that class shall itself be schematized and stored here for
+   * reconstruction later.
    */
   private readonly _schemas: Map<string, JSONSchema7> = new Map();
   get schemas(): ReadonlyMap<string, DeepReadonly<JSONSchema7>> { return this._schemas; }
 
   /**
-   * We store all references that we find as we build our schema so we can fix them up
-   * properly as we stash them into a document upon construction.
+   * We store all references that we find as we build our schema so we can fix
+   * them up properly as we stash them into a document upon construction.
    */
   private readonly _references: Array<JSONReference> = [];
 
   /**
-   * Contains the static and unchanging type transforms for JS built-ins such as Number
-   * or Date.
+   * Contains the static and unchanging type transforms for JS built-ins such as
+   * Number or Date.
    */
   private readonly _typeTransforms: Map<Class<any>, JSONSchema7> = new Map();
+
+  /**
+   * Set of classes to ignore when calling `registerClass`, because we can't
+   * do anything useful with them.
+   */
+  private readonly _registerIgnores: Set<Class<any>> = new Set();
 
   constructor(
     logger: Logger = FallbackLogger,
@@ -70,96 +71,91 @@ export class Schematizer {
     this._typeTransforms.set(String, { type: 'string' });
     this._typeTransforms.set(Date, { type: 'string', format: 'date' });
     this._typeTransforms.set(Boolean, { type: 'boolean' });
+
+    this._registerIgnores.add(Promise);
+    this._registerIgnores.add(Array);
+    this._registerIgnores.add(Object);
   }
 
   /**
-   * Explicitly registers a class as a sub-schema that should be returned (in the `#/definitions`
-   * block of a normal JSON schema, in `#/components/schemas` of an OpenAPI doc, etc.). This is
-   * probably rarely needed.
+   * Explicitly registers a class as a sub-schema that should be returned (in
+   * the `#/definitions` block of a normal JSON schema, in
+   * `#/components/schemas` of an OpenAPI doc, etc.). This is probably rarely
+   * needed.
    *
    * @param cls
    */
   registerClass(cls: Class<any>): void {
-    this._unrollClass(cls);
+    if (this._typeTransforms.has(cls) || this._registerIgnores.has(cls)) {
+      this.logger.debug(`registerClass: attempted to register static type or ignored class '${cls}'.`);
+    } else {
+      this._unrollClass(cls);
+    }
+  }
+
+  isClassRegistered(type: Class<any>) {
+    return this._schemas.has(getModelName(type));
+  }
+
+  makeDocumentInstance(referencePath: string): SchematizedDocumentInstance {
+    return new SchematizedDocumentInstance(
+      (t) => this._inferBaseTypes(t),
+      referencePath,
+      this.schemas,
+    );
   }
 
   /**
-   * Given an object (such as a JSON schema document), this method causes the schematizer to
-   * update all internal references within all provided schemas, create a deep clone of all
-   * schemas (to isolate those references), and insert those schemas into an object at the
-   * path provided.
-   *
-   * `path` must be a JSON Reference path, i.e.:
-   *
-   * `#/definitions`
-   * `root-document.json#/components/schemas`
-   *
-   * **THIS CREATES STATEFUL CHANGES TO THE SCHEMATIZER.** They should be constrained to within
-   * the current iteration as this is not an async method, but if you're introspecting the guts
-   * of this, demons may fly out your nose.
-   *
-   * @param obj the schema to update
-   * @param path a JSON Reference path
+   * Creates a JSON reference based on a class. It optionally, if `trackRef` is
+   * true, records the reference for use by `_mungeReferences`. `trackRef`
+   * should be false for any publicly-handled references coming out of the
+   * schematizer.
    */
-  insertSchemasIntoObject<T extends StringTo<any>>(obj: T, path: string): T {
-    const pathParts = _.last(path.split('#/'))?.split('/');
-    if (!pathParts) {
-      throw new SchemasError(`insertSchemasIntoObject: bad path: ${path}`);
-    }
-
-    this._mungeReferences(path);
-
-    const schemas: StringTo<JSONSchema7> = {};
-    for (const [name, schema] of this._schemas) {
-      schemas[name] = schema;
-    }
-
-    _.set(obj, pathParts, _.cloneDeep(schemas));
-
-    return obj;
-  }
-
-  private _mungeReferences(path: string) {
-    for (const ref of this._references) {
-      const name = _.last(ref.$ref.split('/'));
-      if (!name) {
-        throw new SchemasError(`_mungeReferences: bad ref: ${ref} for new path ${path}`);
-      }
-
-      ref.$ref = `${path}/${name}`;
-    }
-  }
-
-  /**
-   * Helps us keep track of the references we create so we can do our
-   * stateful fixup before splatting them out.
-   */
-  private _referenceFor(cls: Class<any>): JSONReference {
+  private _referenceFor(
+    cls: Class<any>,
+    trackRef: boolean = true,
+    referencePath: string = '#/TEMPORARY',
+  ): JSONReference {
     const name = getModelName(cls);
 
-    const ref: JSONReference = { $ref: `#/TEMPORARY/${name}` };
+    const ref: JSONReference = { $ref: `${referencePath}/${name}` };
+
     this._references.push(ref);
 
     return ref;
   }
 
   /**
-   * Handles the "is this a constructor [function]?" and the
-   * "OK, is this just a JSON schema?" fork.
+   * Handles the "is this a constructor [function]?" and the "OK, is this just a
+   * JSON schema?" fork.
    */
   private _unroll(type: Schema): JSONSchema7 {
     switch(typeof(type)) {
       case 'function':
-        return this._inferFromType(type);
+        return this._inferFromTypeOrSchematize(type);
       default:
         return this._unrollTypedSchema(type);
     }
   }
 
   /**
-   *
+   * Given a type that shows up in either `design:type`, `design:paramtype`, or
+   * an (annotated) schema, unwrap the object into a schema to be stored in the
+   * schematizer.
    */
-  private _inferFromType(type: any): JSONSchema7 {
+  private _inferFromTypeOrSchematize(
+    type: any,
+    otherFields: Partial<InferredScalarProperties> = {},
+  ): JSONSchema7 {
+    const baseInfer = this._inferBaseTypes(type);
+    if (baseInfer) {
+      return { ...baseInfer, ...otherFields };
+    }
+
+    return this._unrollClass(type);
+  }
+
+  private _inferBaseTypes(type: any, noThrow: boolean = false): JSONSchema7 | null {
     const staticSchema = this._typeTransforms.get(type);
     if (staticSchema) {
       return staticSchema;
@@ -193,7 +189,7 @@ export class Schematizer {
           'on inference.',
         );
       default:
-        return this._unrollClass(type);
+        return null;
     }
   }
 
@@ -215,10 +211,10 @@ export class Schematizer {
       this._schemas.set(name, extractedSchema);
     }
 
-    // Not all uses of `_unrollClass` will actually use this reference object, so
-    // we will have some dangling references in the reference list. However, they're
-    // encapsulated and each is of marginal expense when literalizing the schema; I
-    // think it's fine.
+    // Not all uses of `_unrollClass` will actually use this reference object,
+    // so we will have some dangling references in the reference list. However,
+    // they're encapsulated and each is of marginal expense when literalizing
+    // the schema; I think it's fine.
     return this._referenceFor(cls);
   }
 
@@ -273,9 +269,9 @@ export class Schematizer {
   private _unrollTypedSchema(
     schema: SchemaWithClassTypes,
   ): JSONSchema7 {
-    // Take the `SchemaWithClassTypes`, for every place it overrides `JSONSchema7`,
-    // replace the result with `unroll(item, dependingSchemas)` or
-    // `unrollDefinitions(item, dependingSchemas)` depending on the value.
+    // Take the `SchemaWithClassTypes`, for every place it overrides
+    // `JSONSchema7`, replace the result with `unroll(item, dependingSchemas)`
+    // or `unrollDefinitions(item, dependingSchemas)` depending on the value.
     return {
       ...schema,
 
