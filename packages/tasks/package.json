@@ -1,0 +1,38 @@
+{
+  "name": "@stockade/tasks",
+  "version": "0.1.0",
+  "description": "Application-side task runner functionality for the Stockade framework",
+  "keywords": [
+    "api",
+    "web",
+    "framework",
+    "http",
+    "openapi3",
+    "swagger",
+    "openapi"
+  ],
+  "author": "Ed Ropple <ed@edropple.com>",
+  "homepage": "https://github.com/",
+  "license": "MIT",
+  "main": "dist",
+  "scripts": {
+    "lint": "tslint --project .",
+    "build": "tsc",
+    "watch": "yarn run -s build --watch",
+    "test": "jest",
+    "test:pretty": "bash -c 'yarn run -s test 2> >(yarn run -s log:parse >&2)'",
+    "test:verbose": "cross-env STOCKADE_UTILS_FALLBACK_LOGGER_LEVEL=debug jest",
+    "test:verbose:pretty": "bash -c 'yarn run -s test:verbose 2> >(yarn run -s log:parse >&2)'"
+  },
+  "dependencies": {
+    "reflect-metadata": "0.1.13",
+    "runtypes": "4.2.0"
+  },
+  "peerDependencies": {
+    "@stockade/core": "0.1.0"
+  },
+  "devDependencies": {
+    "@stockade/core": "0.1.0",
+    "@types/node": "13.9.0"
+  }
+}

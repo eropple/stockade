@@ -1,0 +1,23 @@
+node_modules/
+out/
+build/
+dist/
+coverage/
+
+tmp/
+
+*.log
+*.jsonl
+
+*.tsbuildinfo
+
+*.d.ts
+*.js
+*.js.map
+
+package-lock.json
+
+# typescript build stuff (and the inevitable exceptions)
+!jest.config.js
+!jest.config.base.js
+!**/extensions/*.d.ts

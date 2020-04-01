@@ -1,0 +1,38 @@
+{
+  "name": "@stockade/schemas",
+  "version": "0.1.0",
+  "description": "A shared collection of tools for managing and working with JSON schemas and objects that represent them.",
+  "keywords": [
+    "stockade"
+  ],
+  "author": "Ed Ropple <ed@edropple.com>",
+  "homepage": "https://github.com/",
+  "license": "MIT",
+  "main": "dist",
+  "scripts": {
+    "lint": "tslint --project .",
+    "build": "tsc",
+    "watch": "yarn run -s build --watch",
+    "log:parse": "yarn exec -s -- pino-pretty -t",
+    "test": "jest",
+    "test:pretty": "bash -c 'yarn run -s test 2> >(yarn run -s log:parse >&2)'",
+    "test:verbose": "cross-env STOCKADE_UTILS_FALLBACK_LOGGER_LEVEL=debug jest",
+    "test:verbose:pretty": "bash -c 'yarn run -s test:verbose 2> >(yarn run -s log:parse >&2)'"
+  },
+  "dependencies": {
+    "@stockade/utils": "0.1.0",
+    "@types/lodash": "4.14.149",
+    "@types/pino": "5.17.0",
+    "ajv": "6.12.0",
+    "lodash": "4.17.15",
+    "pino": "6.0.0",
+    "reflect-metadata": "0.1.13",
+    "utility-types": "3.10.0"
+  },
+  "peerDependencies": {},
+  "devDependencies": {
+    "@types/json-schema": "7.0.4",
+    "@types/node": "13.9.0",
+    "ajv": "6.12.0"
+  }
+}

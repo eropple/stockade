@@ -1,0 +1,33 @@
+{
+  "name": "@stockade/example",
+  "version": "0.1.0",
+  "description": "An inline example of the Stockade framework.",
+  "private": true,
+  "keywords": [
+    "api",
+    "web",
+    "framework",
+    "http",
+    "openapi3",
+    "swagger",
+    "openapi"
+  ],
+  "author": "Ed Ropple <ed@edropple.com>",
+  "homepage": "https://github.com/",
+  "license": "MIT",
+  "main": "dist",
+  "scripts": {
+    "lint": "tslint --project .",
+    "build": "tsc",
+    "watch": "yarn run -s build --watch",
+    "log:parse": "yarn exec -s -- pino-pretty -t",
+    "start": "bash -c 'yarn run -s start:raw 2> >(yarn run -s log:parse >&2)'",
+    "start:raw": "yarn exec -s -- node ./index.js"
+  },
+  "dependencies": {
+    "@stockade/core": "0.1.0",
+    "@stockade/http": "0.1.0",
+    "reflect-metadata": "0.1.13"
+  },
+  "devDependencies": {}
+}

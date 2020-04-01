@@ -1,0 +1,39 @@
+{
+  "name": "@stockade/inject",
+  "version": "0.1.0",
+  "description": "The Stockade dependency injector.",
+  "keywords": [
+    "stockade",
+    "di",
+    "dependency injection"
+  ],
+  "author": "Ed Ropple <ed@edropple.com>",
+  "homepage": "https://github.com/",
+  "license": "MIT",
+  "scripts": {
+    "lint": "tslint --project .",
+    "build": "tsc",
+    "watch": "yarn run -s build --watch",
+    "log:parse": "yarn exec -s -- pino-pretty -t",
+    "test": "jest",
+    "test:pretty": "bash -c 'yarn run -s test 2> >(yarn run -s log:parse >&2)'",
+    "test:verbose": "cross-env STOCKADE_UTILS_FALLBACK_LOGGER_LEVEL=trace jest",
+    "test:verbose:pretty": "bash -c 'yarn run -s test:verbose 2> >(yarn run -s log:parse >&2)'"
+  },
+  "dependencies": {
+    "async-lock": "1.2.2",
+    "hirestime": "6.0.1",
+    "reflect-metadata": "0.1.13",
+    "runtypes": "4.2.0",
+    "serialize-error": "5.0.0",
+    "utility-types": "3.10.0"
+  },
+  "peerDependencies": {
+    "@stockade/utils": "0.1.0"
+  },
+  "devDependencies": {
+    "@stockade/utils": "0.1.0",
+    "@types/async-lock": "1.1.1",
+    "@types/node": "13.9.0"
+  }
+}
