@@ -16,8 +16,7 @@ import {
   shouldIgnoreProp,
   } from '../annotations';
 import { InferenceError, SchemasError } from '../errors';
-import { IModelMetaInfo, InferredScalarProperties, JSONReference, Schema, SchemaWithClassTypes } from '../types';
-import { SchematizedDocumentInstance } from './schematized-document-instance';
+import { IModelMetaInfo, InferredScalarProperties, isJSONReference, JSONReference, Schema, SchemaWithClassTypes } from '../types';
 import { getModelName } from './utils';
 
 /**
@@ -33,6 +32,9 @@ import { getModelName } from './utils';
  * documentation before you try to use it, or it _will_ bite your head off.
  */
 export class Schematizer {
+  static readonly IGNORABLE_TYPES: ReadonlySet<Class<any>> = new Set([
+    Number, String, Date, Boolean, Promise, Array, Object,
+  ]);
   private readonly logger: Logger;
 
   /**
@@ -99,9 +101,8 @@ export class Schematizer {
 
   makeDocumentInstance(referencePath: string): SchematizedDocumentInstance {
     return new SchematizedDocumentInstance(
-      (t) => this._inferBaseTypes(t),
       referencePath,
-      this.schemas,
+      this,
     );
   }
 
@@ -132,7 +133,7 @@ export class Schematizer {
   private _unroll(type: Schema): JSONSchema7 {
     switch(typeof(type)) {
       case 'function':
-        return this._inferFromTypeOrSchematize(type);
+        return this.inferFromTypeOrSchematize(type);
       default:
         return this._unrollTypedSchema(type);
     }
@@ -143,7 +144,7 @@ export class Schematizer {
    * an (annotated) schema, unwrap the object into a schema to be stored in the
    * schematizer.
    */
-  private _inferFromTypeOrSchematize(
+  inferFromTypeOrSchematize(
     type: any,
     otherFields: Partial<InferredScalarProperties> = {},
   ): JSONSchema7 {
@@ -314,5 +315,83 @@ export class Schematizer {
     if (!schemas) { return undefined }
 
     return schemas.map(s => this._unrollDefinition(s));
+  }
+}
+
+
+/**
+ * Used to get data back _out_ of the schematizer. You load the schematizer with
+ * all your schemas and then you can use `inferOrReference` here to create customized
+ * and correct types for places that want them, such as Fastify query parameters or
+ * OpenAPI operations.
+ */
+export class SchematizedDocumentInstance {
+  constructor(
+    readonly referencePath: string,
+    readonly schematizer: Schematizer,
+  ) {
+  }
+
+  /**
+   * From a type value (either something provided via TypeScript's
+   * `design:type`, `design:paramtype`, or `design:returntype` metadata, or
+   * something provided explicitly by a user), attempts to create a JSON Schema
+   * value that works with the output of the schematizer. If it's a constructor
+   * for a recognized "static" or primitive type, this method returns a JSON
+   * Schema that will be merged with `otherFields`. If it's a constructor for a
+   * generic class, it will be matched with a model internal to the schematizer
+   * and a JSON Reference will be returned.
+   *
+   * **NOTE:** `otherFields` will _only_ be merged into static types, not types
+   * returned as references. This is intended to be used for things like adding
+   * `minimum` or `maximum` to a `type: 'number'`. They are merged _after_ the
+   * base values, so you can do things like `type: 'integer'` to constrain it
+   * further than the static type.
+   *
+   * @param type The type to test against.
+   * @param referencePath The path that references should be directed to (@see insertSchemasIntoObject)
+   * @param otherFields Fields to merge into a static type.
+   */
+  inferOrReference(
+    type: any,
+    otherFields: Partial<InferredScalarProperties> = {},
+  ): JSONSchema7 {
+    const ret = this.schematizer.inferFromTypeOrSchematize(type, otherFields);
+
+    return isJSONReference(ret) ? this._mungeReference(ret) : ret;
+  }
+
+  insertSchemasIntoObject(rootSchema: StringTo<any>): void {
+    const pathParts = (_.last(this.referencePath.split('#/')) || '').split('/');
+    const inserting: StringTo<JSONSchema7> = {};
+    for (const [name, schema] of this.schematizer.schemas) {
+      inserting[name] = this._mungeSchema(schema);
+    }
+
+    _.set(rootSchema, pathParts, inserting);
+  }
+
+  private _mungeSchema(schema: JSONSchema7): JSONSchema7 {
+    const customizer: _.CloneDeepWithCustomizer<JSONSchema7> = (
+      value: any,
+      key: string | number | undefined,
+    ) => {
+      if (key !== '$ref') { return value; }
+
+      const refName = _.last(value.split('/'));
+      if (!refName) {
+        throw new SchemasError(`_mungeReferences: bad ref: ${value}`);
+      }
+
+      return `${this.referencePath}/${refName}`;
+    }
+
+    return _.cloneDeepWith(schema, customizer);
+  }
+
+  private _mungeReference(reference: JSONReference): JSONReference {
+    const namePart = _.last(reference.$ref.split('#/'))?.split('/');
+
+    return { $ref: `${this.referencePath}/${namePart}` };
   }
 }

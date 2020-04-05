@@ -51,3 +51,4 @@ export interface IPropMetaInfo {
 };
 
 export type JSONReference = { $ref: string };
+export function isJSONReference(obj: any): obj is JSONReference { return obj.$ref && typeof(obj.$ref) === 'string'; }
