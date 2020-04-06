@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Class } from 'utility-types';
 
-import { SetMetadatas } from '@stockade/utils/metadata';
+import { DESIGN_TYPE, SetMetadatas } from '@stockade/utils/metadata';
 
 import { IModelBaseInfo, IModelMetaInfo, InferredScalarProperties, IPropMetaInfo, SchemaWithClassTypes } from '../types';
 import { SchemaAnnotationKeys } from './keys';
@@ -18,11 +18,25 @@ export function getModelBaseInfo(cls: Class<any>): IModelBaseInfo | undefined {
   return Reflect.getMetadata(SchemaAnnotationKeys.MODEL, cls);
 }
 
+export function getDesignType<T>(
+  cls: Class<T>,
+  propertyName: Exclude<keyof T, number | symbol>,
+): Class<any> | undefined {
+  return Reflect.getMetadata(DESIGN_TYPE, cls.prototype, propertyName);
+}
+
 export function getRawPropSchema<T>(
   cls: Class<T>,
   propertyName: Exclude<keyof T, number | symbol>,
 ): SchemaWithClassTypes | undefined {
   return Reflect.getMetadata(SchemaAnnotationKeys.PROP_RAW, cls.prototype, propertyName);
+}
+
+export function getPropSchema<T>(
+  cls: Class<T>,
+  propertyName: Exclude<keyof T, number | symbol>,
+): SchemaWithClassTypes | undefined {
+  return Reflect.getMetadata(SchemaAnnotationKeys.PROP, cls.prototype, propertyName);
 }
 
 export function getPropMeta<T>(

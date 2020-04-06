@@ -1,9 +1,11 @@
 import { HTTPMethod } from 'fastify';
+import { Class } from 'utility-types';
 
 import { IModule } from '@stockade/core';
 import { Domain } from '@stockade/inject';
-import { SchemaWithClassTypes } from '@stockade/schemas';
+import { Schema, SchemaWithClassTypes } from '@stockade/schemas';
 import { IParameterMetadata, RETURN_DESIGN_TYPE } from '@stockade/utils/metadata';
+import { StringTo } from '@stockade/utils/types';
 
 import { AnnotationKeys } from '../annotations/keys';
 import { FastifyHookClass } from '../hooks';
@@ -38,7 +40,7 @@ export interface IMethodOptions {
    * - `manualReturn` is true
    * - `returnHeaders['content-type']` is set to any value other than `application/json`
    */
-  returnSchema?: any;
+  readonly returnSchema?: any;
 
   /**
    * Headers that should be attached to the response from this method. Please note that
@@ -47,14 +49,14 @@ export interface IMethodOptions {
    *
    * These values _are_ honored if `manualReturn` is true.
    */
-  returnHeaders?: { [headerName: string]: string | ReadonlyArray<string> };
+  readonly returnHeaders?: { [headerName: string]: string | ReadonlyArray<string> };
 
   /**
    * When returning cleanly, this return code shall be used.
    *
    * Ignored if `manualReturn` is true.
    */
-  returnCode?: number;
+  readonly returnCode?: number;
   /**
    * This signals to Stockade that you will be taking control of the
    * reply lifecycle from here on out. You must call `reply.send` in
@@ -64,50 +66,59 @@ export interface IMethodOptions {
    * Many other options don't act as expected if this is set to true. Consult
    * the documentation.
    */
-  manualReturn?: boolean;
+  readonly manualReturn?: boolean;
 }
 
 export interface IMethodWithBodyOptions extends IMethodOptions {
-  contentType?: string;
+  readonly contentType?: string;
 }
 
 // spoilers: these are just OAS3
-export interface IMappedEndpointPathParameter {
-  name: string;
-  in: 'path';
-  description?: string;
-  required: true;
-  deprecated?: boolean;
-  style?: 'simple',
-  schema: SchemaWithClassTypes;
+export interface IMappedEndpointParameterBase {
+  readonly name: string;
+  readonly in: string;
+  readonly description?: string;
+  readonly required?: boolean;
+  readonly deprecated?: boolean;
+  readonly style?: string;
+  readonly schema?: Schema;
 }
 
-export interface IMappedEndpointQueryParameter {
-  name: string;
-  in: 'query',
-  description?: string;
-  required?: boolean;
-  deprecated?: boolean;
-  style?: 'form';
-  schema: SchemaWithClassTypes;
+export interface IMappedEndpointPathParameter extends IMappedEndpointParameterBase {
+  readonly in: 'path';
+  readonly required?: true;
+  readonly style?: 'simple',
 }
 
-export interface IMappedEndpointHeaderParameter {
-  name: Exclude<string, 'Accept' | 'Content-Type' | 'Authorization' | 'accept' | 'content-type' | 'authorization'>;
-  in: 'header';
-  description?: string;
-  required?: boolean;
-  deprecated?: boolean;
+export interface IMappedEndpointQueryParameter extends IMappedEndpointParameterBase {
+  readonly in: 'query',
+  readonly style?: 'form';
+}
+
+export type EndpointHeaderName =
+  Exclude<string, 'Accept' | 'Content-Type' | 'Authorization' | 'accept' | 'content-type' | 'authorization'>;
+
+export interface IMappedEndpointHeaderParameter extends IMappedEndpointParameterBase {
+  readonly name: EndpointHeaderName;
+  readonly in: 'header';
   style?: 'simple';
-  schema: SchemaWithClassTypes;
 }
 
 // TODO: support cookies
 export type MappedEndpointParameter =
   | IMappedEndpointPathParameter
   | IMappedEndpointQueryParameter
-  | IMappedEndpointQueryParameter
+  | IMappedEndpointHeaderParameter
   ;
+
+export interface IMappedEndpointRequestBody {
+  readonly contentType?: string;
+  readonly schema: Schema;
+}
+
+export function isMappedEndpointRequestBody(o: any): o is IMappedEndpointRequestBody {
+  return o && o.content;
+}
 
 export interface IMappedEndpointBasic {
   readonly [AnnotationKeys.ROUTE_METHOD]: HTTPMethod;
@@ -115,7 +126,7 @@ export interface IMappedEndpointBasic {
   readonly [AnnotationKeys.HOOKS]?: ReadonlyArray<FastifyHookClass>;
   readonly [AnnotationKeys.ROUTE_OPTIONS]: IMethodOptions | IMethodWithBodyOptions;
   readonly [AnnotationKeys.EXPLICIT_PARAMETERS]?: Array<any>;
-  readonly [RETURN_DESIGN_TYPE]?: Function;
+  readonly [RETURN_DESIGN_TYPE]?: Class<any>;
 
   readonly [extraKey: string]: any;
 }
@@ -124,6 +135,8 @@ export interface IMappedEndpointDetailed extends IMappedEndpointBasic {
   readonly controller: ControllerClass;
   readonly handlerName: string;
   readonly parameters: ReadonlyMap<number, IMappedEndpointParameter>;
+
+  readonly requestBody?: IMappedEndpointRequestBody;
 }
 
 export interface IParameterResolver<T = any> {
@@ -132,11 +145,15 @@ export interface IParameterResolver<T = any> {
   readonly inject: ReadonlyArray<symbol>;
   readonly fn: (...args: Array<any>) => Promise<T>;
 
+  readonly implicitParameterInfo?: MappedEndpointParameter;
+  readonly requestBody?: IMappedEndpointRequestBody;
+
   readonly [extraKey: string]: any;
 }
 
 export interface IMappedEndpointParameter extends IParameterMetadata {
   readonly [AnnotationKeys.PARAMETER_RESOLVER]?: IParameterResolver;
+  readonly implicitParameterInfo?: MappedEndpointParameter;
 
   readonly [extraKey: string]: any;
 }

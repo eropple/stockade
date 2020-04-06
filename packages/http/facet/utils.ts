@@ -1,9 +1,14 @@
+import { FastifyInstance, RouteSchema } from 'fastify';
+import { JSONSchema7 } from 'json-schema';
 import * as _ from 'lodash';
 
-import { IAppSpec, IModule } from '@stockade/core';
+import { IModule } from '@stockade/core';
 import { Domain } from '@stockade/inject';
+import { SchematizedDocumentInstance, Schematizer } from '@stockade/schemas';
+import { StockadeError } from '@stockade/utils/error';
 import { isClass } from '@stockade/utils/type-guards';
 
+import { AnnotationKeys } from '../annotations/keys';
 import { IFastifyHookDefinition } from '../hooks';
 import {
   hasOnErrorHook,
@@ -17,6 +22,16 @@ import {
 } from '../hooks/helpers';
 import { isHttpModule } from '../IHttpModule';
 import { ControllerClass } from '../types';
+import {
+  IMappedEndpointDetailed,
+  IMappedEndpointHeaderParameter,
+  IMappedEndpointPathParameter,
+  IMappedEndpointQueryParameter,
+  IMappedEndpointRequestBody,
+  IParameterResolver,
+  MappedEndpointParameter,
+} from './controller-info';
+import { extractParameterResolversFromParameters } from './schemas';
 
 export function findControllers(
   rootDomain: Domain<IModule>,
@@ -74,4 +89,104 @@ export function extractHooks(hookDefs: ReadonlyArray<[IFastifyHookDefinition, Do
     onResponse:
       _.sortBy(hookDefs.filter(h => hasOnResponseHook(h[0].class)), h => h[0].weight ?? 0),
   };
+}
+
+export function getAllParametersForEndpoint(endpointInfo: IMappedEndpointDetailed) {
+  const explicitParameters: Array<MappedEndpointParameter> =
+    endpointInfo[AnnotationKeys.EXPLICIT_PARAMETERS] ?? [];
+  const allParameters = [
+    ...explicitParameters,
+    ...[...endpointInfo.parameters.values()].map(p => p.implicitParameterInfo),
+  ].filter((epr): epr is MappedEndpointParameter => !!epr);
+
+  return allParameters
+}
+
+export function makeEndpointSchemaForFastify(
+  endpointInfo: IMappedEndpointDetailed,
+  allParameters: ReadonlyArray<MappedEndpointParameter>,
+  document: SchematizedDocumentInstance,
+): RouteSchema {
+  const ret: RouteSchema = {};
+
+  console.log(endpointInfo.controller, endpointInfo.handlerName, allParameters);
+
+  const { requestBody } = endpointInfo;
+  if (requestBody) {
+    ret.body = document.inferOrReference(requestBody.schema);
+  }
+
+  const headerSchemaEnvelope: JSONSchema7 = {
+    type: 'object',
+    required: [],
+    properties: {},
+  };
+
+  const pathSchemaEnvelope: JSONSchema7 = {
+    type: 'object',
+    required: [],
+    properties: {},
+  };
+
+  const querySchemaEnvelope: JSONSchema7 = {
+    type: 'object',
+    required: [],
+    properties: {},
+  };
+
+  for (const parameter of allParameters) {
+    if (!parameter) { continue; }
+
+    switch (parameter.in) {
+      case 'header':
+        headerSchemaEnvelope.properties![parameter.name] = document.inferOrReference(parameter.schema);
+        if (parameter.required) {
+          headerSchemaEnvelope.required!.push(parameter.name);
+        }
+        break;
+      case 'path':
+        pathSchemaEnvelope.required!.push(parameter.name);
+        pathSchemaEnvelope.properties![parameter.name] = document.inferOrReference(parameter.schema);
+        break;
+      case 'query':
+        querySchemaEnvelope.properties![parameter.name] = document.inferOrReference(parameter.schema);
+        if (parameter.required) {
+          querySchemaEnvelope.required!.push(parameter.name);
+        }
+        break;
+      default:
+        throw new StockadeError(
+          `endpoint '${endpointInfo.handlerName}' in '${endpointInfo.controller.name}': ` +
+          `Unrecognized parameter.in '${(parameter as any).in ?? 'undefined'}'.`,
+        );
+    }
+  }
+
+  if (Object.keys(headerSchemaEnvelope.properties!).length > 0) {
+    ret.headers = headerSchemaEnvelope;
+  }
+
+  if (Object.keys(pathSchemaEnvelope.properties!).length > 0) {
+    ret.params = pathSchemaEnvelope;
+  }
+
+  if (Object.keys(querySchemaEnvelope.properties!).length > 0) {
+    ret.querystring = querySchemaEnvelope;
+  }
+
+  // TODO: response body
+
+  return ret;
+}
+
+export function bindSchematizerToFastify(schematizer: Schematizer, fastify: FastifyInstance) {
+  const jsonSchemaDocument = schematizer.makeDocumentInstance('http-facet.json#/definitions');
+  const fastifyModelDocument: JSONSchema7 = {
+    $id: 'http-facet.json',
+    definitions: {},
+  };
+  jsonSchemaDocument.insertSchemasIntoObject(fastifyModelDocument);
+  fastify.addSchema(fastifyModelDocument);
+
+  return jsonSchemaDocument;
 }

@@ -15,6 +15,12 @@ import { getAllMetadataForClass, getAllPropertyMetadataForClass, setMetadata } f
 // metadata.
 
 export const STOCKADE_PARAMETER_METADATA_KEY = '@stockade/utils:PARAMETER_METADATA';
+
+/**
+ * The runtime (as in "JavaScript runtime")-provided type of a property.
+ */
+export const DESIGN_TYPE = 'design:type';
+
 /**
  * The runtime (as in "JavaScript runtime")-provided parameter types from a method.
  */
@@ -36,7 +42,9 @@ export function getPropertyParameterMetadataForClass<
   T extends Object,
   P extends PropertyOf<T>
 >(cls: Class<T>, propertyKey: P): ReadonlyAllParameterMetadata {
-  return getAllPropertyMetadataForClass(cls, propertyKey)[STOCKADE_PARAMETER_METADATA_KEY];
+  const ret = getAllPropertyMetadataForClass(cls, propertyKey)[STOCKADE_PARAMETER_METADATA_KEY];
+
+  return ret || new Map();
 }
 
 export function getConstructorParameterMetadataForClass<

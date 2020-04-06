@@ -41,6 +41,7 @@
     "@stockade/core": "0.1.0",
     "@types/lodash": "4.14.149",
     "@types/node": "13.9.0",
-    "@types/uuid": "^3.4.7"
+    "@types/uuid": "^3.4.7",
+    "json-schema": "0.2.5"
   }
 }

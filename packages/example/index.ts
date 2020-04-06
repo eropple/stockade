@@ -1,3 +1,5 @@
+import 'source-map-support';
+
 import { App, Runner } from '@stockade/core';
 import { HttpApp, httpFacet } from '@stockade/http';
 

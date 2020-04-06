@@ -16,6 +16,7 @@ class ReturnDTO {
 class TestController1 {
   @Get()
   testGet() {
+    // tslint:disable-next-line: no-magic-numbers
     return 5;
   }
 

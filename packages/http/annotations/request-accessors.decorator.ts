@@ -1,50 +1,100 @@
 import { FastifyRequest } from 'fastify';
 
-import { SchemaWithClassTypes } from '@stockade/schemas';
+import { Schema } from '@stockade/schemas';
 
+import {
+  EndpointHeaderName,
+  IMappedEndpointHeaderParameter,
+  IMappedEndpointPathParameter,
+  IMappedEndpointQueryParameter,
+  IMappedEndpointRequestBody,
+  isMappedEndpointRequestBody,
+} from '../facet/controller-info';
 import { REQUEST } from '../inject-keys';
 import { ParameterResolver } from './parameter-resolver.decorator';
 
-export interface IRequestAccessorArgsBase {
-  schema?: SchemaWithClassTypes;
-}
+export { FastifyRequest } from 'fastify';
 
-export function Query(queryName: string, args: IRequestAccessorArgsBase) {
+export type QueryArgs =
+  Pick<
+    IMappedEndpointQueryParameter,
+    'description' | 'required' | 'deprecated' | 'style' | 'schema'
+  >;
+export type HeaderArgs =
+  Pick<
+    IMappedEndpointHeaderParameter,
+    'description' | 'required' | 'deprecated' | 'style' | 'schema'
+  >;
+export type PathArgs =
+  Pick<
+    IMappedEndpointPathParameter,
+    'description' | 'required' | 'deprecated' | 'style' | 'schema'
+  >;
+
+export type RequestBodyArgs = Schema | IMappedEndpointRequestBody;
+
+export function Request() {
   return ParameterResolver({
-    friendlyName: 'QueryParameter',
-    queryName,
+    friendlyName: 'Request',
     inject: [REQUEST],
-    fn: (req: FastifyRequest) => req.query[queryName],
-    ...args,
+    fn: async (req: FastifyRequest) => req,
   });
 }
 
-export function RequestBody(args: IRequestAccessorArgsBase) {
+export function Query(name: string, args: QueryArgs = {}) {
+  const implicitParameter: IMappedEndpointQueryParameter = {
+    name,
+    in: 'query',
+    ...args,
+  };
+
+  return ParameterResolver({
+    friendlyName: 'QueryParameter',
+    name,
+    inject: [REQUEST],
+    fn: (req: FastifyRequest) => req.query[name],
+    implicitParameter,
+  });
+}
+
+export function RequestBody(requestBody?: RequestBodyArgs) {
   return ParameterResolver({
     friendlyName: 'RequestBody',
     inject: [REQUEST],
     fn: (req: FastifyRequest) => req.body,
-    ...args,
+    requestBody,
   });
 }
 
-export function Header(headerName: string, args: IRequestAccessorArgsBase) {
+export function Header(name: EndpointHeaderName, args: HeaderArgs = {}) {
+  const implicitParameter: IMappedEndpointHeaderParameter = {
+    name,
+    in: 'header',
+    ...args,
+  };
+
   return ParameterResolver({
     friendlyName: 'HeaderParameter',
-    headerName,
+    name,
     inject: [REQUEST],
-    fn: (req: FastifyRequest) => req.headers[headerName],
-    ...args,
+    fn: (req: FastifyRequest) => req.headers[name],
+    implicitParameter,
   });
 }
 
-export function Path(pathSegmentName: string, args: IRequestAccessorArgsBase) {
+export function Path(name: string, args: PathArgs = {}) {
+  const implicitParameter: IMappedEndpointPathParameter = {
+    name,
+    in: 'path',
+    ...args,
+  };
+
   return ParameterResolver({
     friendlyName: 'PathParameter',
-    pathSegmentName,
+    name,
     inject: [REQUEST],
-    fn: (req: FastifyRequest) => req.params[pathSegmentName],
-    ...args,
+    fn: (req: FastifyRequest) => req.params[name],
+    implicitParameter,
   });
 }
 

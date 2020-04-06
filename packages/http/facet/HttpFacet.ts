@@ -1,5 +1,6 @@
 import * as Fastify from 'fastify';
 import * as hyperid from 'hyperid';
+import { JSONSchema7 } from 'json-schema';
 
 import { DEPENDENCY_LIFECYCLE, FacetBase, IAppSpec, IFacetBehavior, IModule, LOGGER } from '@stockade/core';
 import { Domain, LifecycleInstance } from '@stockade/inject';
@@ -29,8 +30,8 @@ import {
 } from './controller-info';
 import { IHttpOptions } from './IHttpOptions';
 import { HTTP, HTTP_REQUEST } from './lifecycle';
-import { buildSchematizer } from './schemas';
-import { extractHooks, findControllers, findHooks } from './utils';
+import { buildSchematizer, extractParameterResolversFromParameters } from './schemas';
+import { bindSchematizerToFastify, extractHooks, findControllers, findHooks, getAllParametersForEndpoint, makeEndpointSchemaForFastify } from './utils';
 
 const DEFAULT_HTTP_PORT = 10080;
 
@@ -74,7 +75,6 @@ export class HttpFacet extends FacetBase {
     // it'd be downright stupid to have to call some sort of external thing to doctor the
     // HTTP server. Should all be handled right here.
     this.lifecycleInstance.registerTemporary(CONTROLLERS, this._allControllers);
-    this.logger.info({ allControllers: this._allControllers });
   }
   async doStart(): Promise<any> {
     const fastifyListenOptions = this._prepareFastifyListenOptions(this._options);
@@ -339,12 +339,22 @@ export class HttpFacet extends FacetBase {
     }
   }
 
+  /**
+   * This right here is the method that does most of the wire-up for the Fastify instance
+   * underneath the HttpFacet, including schema registration and a bunch of other stuff.
+   *
+   * TODO: this desperately needs some modularization and cutting down for clarity
+   */
   private _bindRoutesToControllers(fastifyBase: Fastify.FastifyInstance): void {
-    console.log(require('util').inspect(this._allControllers, false, null, true));
-
-    // this will provide the schematizer for use in other systems, like an OpenAPI generator
+    // this will provide the schematizer for use in other systems, like an OpenAPI generator.
+    // It will walk all controllers (parameters, etc.), find all model classes used in
+    // our endpoints, and provide them in a form that can be splatted out into JSON Schema
+    // (as below), OpenAPI, etc.
     const schematizer = buildSchematizer(this.logger, this._allControllers);
     this.lifecycleInstance.registerTemporary(SCHEMATIZER, schematizer);
+
+    // actually registers this schema with Fastify
+    const jsonSchemaDocument = bindSchematizerToFastify(schematizer, fastifyBase);
 
     for (const controllerInfo of this._allControllers) {
       const controller = controllerInfo.controller;
@@ -371,23 +381,27 @@ export class HttpFacet extends FacetBase {
           const endpointPath = endpointInfo[AnnotationKeys.ROUTE_PATH];
           const endpointOptions = endpointInfo[AnnotationKeys.ROUTE_OPTIONS];
           const method = endpointInfo[AnnotationKeys.ROUTE_METHOD];
-          const explicitParameters: Array<MappedEndpointParameter> =
-            endpointInfo[AnnotationKeys.EXPLICIT_PARAMETERS] ?? [];
           const url = `/${stripPathSlashes(controllerPathBase)}/${stripPathSlashes(endpointPath)}`;
 
           const endpointParameterResolvers: Array<IParameterResolver> =
             extractParameterResolversFromParameters(endpointInfo);
 
-          eLogger.debug({ method, url }, `Defining route ${method} ${url}.`);
+          const allParameters = getAllParametersForEndpoint(endpointInfo);
+
+          const routeSchema = makeEndpointSchemaForFastify(endpointInfo, allParameters, jsonSchemaDocument);
+          eLogger.debug({ method, url, routeSchema }, `Defining route ${method} ${url}.`);
           fastify.route({
             method,
             url,
+            schema: routeSchema,
             handler: async (request, reply) => {
               const hLogger = (request.log as Logger).child({ controllerName, handlerName });
               const lifecycle: LifecycleInstance = request.$stockade.lifecycleInstance;
 
+              // overrides the external logger for this scope only
               lifecycle.registerTemporary(LOGGER, hLogger);
 
+              // build our controller instance...
               const controllerInstance = await lifecycle.instantiate(
                 controllerInfo.controller,
                 controllerInfo.domain,
@@ -438,28 +452,8 @@ export class HttpFacet extends FacetBase {
         }
       });
     }
+
+    const doc: JSONSchema7 = {};
   }
 }
 
-function extractParameterResolversFromParameters(
-  endpointInfo: IMappedEndpointDetailed,
-): Array<IParameterResolver> {
-  if (!endpointInfo.parameters) {
-    return [];
-  }
-
-  const ret: Array<IParameterResolver> = [];
-  for (const [idx, parameter] of endpointInfo.parameters) {
-    const resolver = parameter['@stockade/http:PARAMETER_RESOLVER'];
-    if (!resolver) {
-      throw new Error(
-        `Endpoint '${endpointInfo.handlerName}' in controller '${endpointInfo.controller.name}' ` +
-        `is missing a parameter resolver for index: ${idx}`,
-      );
-    }
-
-    ret[idx] = resolver;
-  }
-
-  return ret;
-}

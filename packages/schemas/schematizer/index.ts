@@ -5,18 +5,27 @@ import { isArray } from 'util';
 import { Class, DeepReadonly } from 'utility-types';
 
 import { FallbackLogger } from '@stockade/utils/logging';
+import { getAllPropertyMetadataForClass } from '@stockade/utils/metadata';
 import { StringTo } from '@stockade/utils/types';
 
 import {
+  getDesignType,
   getModelBaseInfo,
   getModelMeta,
   getPropMeta,
+  getPropSchema,
   getRawModelSchema,
   getRawPropSchema,
   shouldIgnoreProp,
   } from '../annotations';
 import { InferenceError, SchemasError } from '../errors';
-import { IModelMetaInfo, InferredScalarProperties, isJSONReference, JSONReference, Schema, SchemaWithClassTypes } from '../types';
+import {
+  InferredScalarProperties,
+  isJSONReference,
+  JSONReference,
+  Schema,
+  SchemaWithClassTypes,
+} from '../types';
 import { getModelName } from './utils';
 
 /**
@@ -35,6 +44,16 @@ export class Schematizer {
   static readonly IGNORABLE_TYPES: ReadonlySet<Class<any>> = new Set([
     Number, String, Date, Boolean, Promise, Array, Object,
   ]);
+  static readonly TYPE_TRANSFORMS: Map<Class<any>, JSONSchema7> =
+    new Map()
+      .set(Number, { type: 'number' })
+      .set(String, { type: 'string' })
+      .set(Date, { type: 'string', format: 'date' })
+      .set(Boolean, { type: 'boolean' });
+  static inferBaseType(cls: Class<any>): JSONSchema7 | null {
+    return Schematizer.TYPE_TRANSFORMS.get(cls) ?? null;
+  }
+
   private readonly logger: Logger;
 
   /**
@@ -47,36 +66,21 @@ export class Schematizer {
   get schemas(): ReadonlyMap<string, DeepReadonly<JSONSchema7>> { return this._schemas; }
 
   /**
-   * We store all references that we find as we build our schema so we can fix
-   * them up properly as we stash them into a document upon construction.
-   */
-  private readonly _references: Array<JSONReference> = [];
-
-  /**
    * Contains the static and unchanging type transforms for JS built-ins such as
    * Number or Date.
    */
-  private readonly _typeTransforms: Map<Class<any>, JSONSchema7> = new Map();
+  private static readonly _typeTransforms: Map<Class<any>, JSONSchema7> = new Map();
 
   /**
    * Set of classes to ignore when calling `registerClass`, because we can't
    * do anything useful with them.
    */
-  private readonly _registerIgnores: Set<Class<any>> = new Set();
+  private readonly _registerIgnores: Set<Class<any>> = new Set(Schematizer.IGNORABLE_TYPES);
 
   constructor(
     logger: Logger = FallbackLogger,
   ) {
     this.logger = logger.child({ component: this.constructor.name });
-
-    this._typeTransforms.set(Number, { type: 'number' });
-    this._typeTransforms.set(String, { type: 'string' });
-    this._typeTransforms.set(Date, { type: 'string', format: 'date' });
-    this._typeTransforms.set(Boolean, { type: 'boolean' });
-
-    this._registerIgnores.add(Promise);
-    this._registerIgnores.add(Array);
-    this._registerIgnores.add(Object);
   }
 
   /**
@@ -88,8 +92,8 @@ export class Schematizer {
    * @param cls
    */
   registerClass(cls: Class<any>): void {
-    if (this._typeTransforms.has(cls) || this._registerIgnores.has(cls)) {
-      this.logger.debug(`registerClass: attempted to register static type or ignored class '${cls}'.`);
+    if (Schematizer.TYPE_TRANSFORMS.has(cls) || this._registerIgnores.has(cls)) {
+      this.logger.trace(`registerClass: attempted to register static type or ignored class '${cls}'.`);
     } else {
       this._unrollClass(cls);
     }
@@ -103,6 +107,7 @@ export class Schematizer {
     return new SchematizedDocumentInstance(
       referencePath,
       this,
+      this.logger,
     );
   }
 
@@ -112,6 +117,7 @@ export class Schematizer {
    * should be false for any publicly-handled references coming out of the
    * schematizer.
    */
+  // tslint:disable-next-line: prefer-function-over-method
   private _referenceFor(
     cls: Class<any>,
     trackRef: boolean = true,
@@ -121,8 +127,6 @@ export class Schematizer {
 
     const ref: JSONReference = { $ref: `${referencePath}/${name}` };
 
-    this._references.push(ref);
-
     return ref;
   }
 
@@ -130,12 +134,18 @@ export class Schematizer {
    * Handles the "is this a constructor [function]?" and the "OK, is this just a
    * JSON schema?" fork.
    */
-  private _unroll(type: Schema): JSONSchema7 {
-    switch(typeof(type)) {
-      case 'function':
-        return this.inferFromTypeOrSchematize(type);
-      default:
-        return this._unrollTypedSchema(type);
+  inferOrSchematize(type: Schema, otherFields: Partial<InferredScalarProperties> = {}): JSONSchema7 {
+    try {
+      this.logger.trace(`inferOrSchematize: starting for '${type}'.`);
+      switch(typeof(type)) {
+        case 'function':
+          return this.inferFromTypeOrSchematize(type, otherFields);
+        default:
+          return this._unrollTypedSchema(type);
+      }
+    } catch (err) {
+      this.logger.error({ err }, `inferOrSchematize: error for '${type}'.`);
+      throw err;
     }
   }
 
@@ -148,7 +158,7 @@ export class Schematizer {
     type: any,
     otherFields: Partial<InferredScalarProperties> = {},
   ): JSONSchema7 {
-    const baseInfer = this._inferBaseTypes(type);
+    const baseInfer = this._inferBaseOrFailOnUnresolvableTypes(type);
     if (baseInfer) {
       return { ...baseInfer, ...otherFields };
     }
@@ -156,8 +166,9 @@ export class Schematizer {
     return this._unrollClass(type);
   }
 
-  private _inferBaseTypes(type: any, noThrow: boolean = false): JSONSchema7 | null {
-    const staticSchema = this._typeTransforms.get(type);
+  // tslint:disable-next-line: prefer-function-over-method
+  private _inferBaseOrFailOnUnresolvableTypes(type: any, noThrow: boolean = false): JSONSchema7 | null {
+    const staticSchema = Schematizer.inferBaseType(type);
     if (staticSchema) {
       return staticSchema;
     }
@@ -195,39 +206,47 @@ export class Schematizer {
   }
 
   private _unrollClass(cls: Class<any>): JSONReference {
-    this.logger.debug(`Attempting to unroll: ${cls}`);
+    let logger = this.logger.child({ fn: '_unrollClass', cls: cls.name ?? 'NO-NAME' });
+    logger.trace(`Attempting to unroll: ${cls}`);
 
     const name = getModelName(cls);
     if (name.includes('/')) {
       throw new SchemasError(`Class '${cls}' has invalid character '/' in its schema name: ${name}`);
     }
 
-    const logger = this.logger.child({ schemaName: name });
+    logger = logger.child({ schemaName: name });
     if (name !== cls.name) {
-      logger.debug(`Overridden class name '${cls}' for schema name: ${name}`);
+      logger.trace(`Overridden class name '${cls}' for schema name: ${name}`);
     }
 
     if (!this._schemas.get(name)) {
+      logger.trace('Not preexisting; extracting schema from class.');
       const extractedSchema = this._extractSchemaFromClass(cls);
       this._schemas.set(name, extractedSchema);
     }
 
-    // Not all uses of `_unrollClass` will actually use this reference object,
-    // so we will have some dangling references in the reference list. However,
-    // they're encapsulated and each is of marginal expense when literalizing
-    // the schema; I think it's fine.
+    logger.trace('Successful; returning reference.');
+
     return this._referenceFor(cls);
   }
 
   private _extractSchemaFromClass(cls: Class<any>): JSONSchema7 {
+    const logger = this.logger.child({ fn: '_extractSchemaFromClass', cls: cls.name ?? 'NO-NAME' });
+    logger.trace('Beginning to extract schema.');
+
     const modelRaw = getRawModelSchema(cls);
     const modelInfo = getModelBaseInfo(cls);
+
     if (modelRaw) {
+      logger.trace('MODEL_RAW found; returning.');
+
       return this._unrollTypedSchema(modelRaw);
     }
 
+    logger.trace('No MODEL_RAW; continuing.');
+
     if (modelInfo) {
-      // making these
+      logger.trace('MODEL found; building from props.');
       const required: Array<string> = [];
       const properties: StringTo<JSONSchema7Definition> = {};
 
@@ -239,11 +258,14 @@ export class Schematizer {
       };
 
       for (const propertyName of Object.keys(cls.prototype)) {
+        const pLogger = logger.child({ propertyName })  ;
         if (shouldIgnoreProp(cls, propertyName)) {
+          pLogger.trace('Ignoring non-prop.');
           continue;
         }
 
         const propRaw = getRawPropSchema(cls, propertyName);
+        const prop = getPropSchema(cls, propertyName);
         const propMeta = getPropMeta(cls, propertyName);
         if (!propMeta) {
           throw new SchemasError(`No PROP_META for '${propertyName}' in '${cls.name}'. Add @Prop, @PropRaw, or @PropIgnore as appropriate.`);
@@ -251,12 +273,28 @@ export class Schematizer {
 
         // TODO: implement @Prop with schema inference, etc
         if (propRaw) {
+          pLogger.trace('Raw prop found, just returning it.');
           properties[propertyName] = propRaw;
+        } else if (prop) {
+          pLogger.trace('Smart prop found; parsing through it.');
+          const designType = getDesignType(cls, propertyName);
+          if (!designType) {
+            throw new SchemasError(
+              `No design:type found in class '${cls}', property '${propertyName}'. ` +
+              `Found metadata keys: ${Object.keys(getAllPropertyMetadataForClass(cls, propertyName))}`,
+            );
+          }
+
+          properties[propertyName] = this.inferOrSchematize(designType, prop);
         } else {
-          throw new SchemasError(`No PROP or PROP_RAW for '${propertyName}' in '${cls.name}'. Add a @Prop or @PropRaw annotation.`);
+          throw new SchemasError(
+            `No PROP or PROP_RAW for '${propertyName}' in '${cls.name}'. Add @Prop or @PropRaw annotation. ` +
+            `Found metadata keys: ${Object.keys(getAllPropertyMetadataForClass(cls, propertyName))}`,
+          );
         }
 
         if (propMeta.required) {
+          pLogger.trace('Is required (via meta); adding to required list on model.');
           required.push(propertyName);
         }
       }
@@ -290,7 +328,7 @@ export class Schematizer {
               : this._unrollDefinition(schema.items)
           : undefined,
 
-      contains: schema.contains ? this._unroll(schema.contains) : undefined,
+      contains: schema.contains ? this.inferOrSchematize(schema.contains) : undefined,
       additionalProperties:
         schema.additionalProperties
           ? this._unrollDefinition(schema.additionalProperties)
@@ -303,9 +341,10 @@ export class Schematizer {
   ): JSONSchema7Definition {
     switch(typeof(schema)) {
       case 'boolean':
-        return schema;
+
+ return schema;
       default:
-        return this._unroll(schema);
+        return this.inferOrSchematize(schema);
     }
   }
 
@@ -326,10 +365,14 @@ export class Schematizer {
  * OpenAPI operations.
  */
 export class SchematizedDocumentInstance {
+  private readonly logger: Logger;
+
   constructor(
     readonly referencePath: string,
     readonly schematizer: Schematizer,
+    logger: Logger,
   ) {
+    this.logger = logger.child({ component: this.constructor.name });
   }
 
   /**
@@ -356,7 +399,8 @@ export class SchematizedDocumentInstance {
     type: any,
     otherFields: Partial<InferredScalarProperties> = {},
   ): JSONSchema7 {
-    const ret = this.schematizer.inferFromTypeOrSchematize(type, otherFields);
+    this.logger.trace(`inferOrReference: starting with '${type}'.`);
+    const ret = this.schematizer.inferOrSchematize(type, otherFields);
 
     return isJSONReference(ret) ? this._mungeReference(ret) : ret;
   }
@@ -390,7 +434,7 @@ export class SchematizedDocumentInstance {
   }
 
   private _mungeReference(reference: JSONReference): JSONReference {
-    const namePart = _.last(reference.$ref.split('#/'))?.split('/');
+    const namePart = _.last(_.last(reference.$ref.split('#/'))?.split('/'));
 
     return { $ref: `${this.referencePath}/${namePart}` };
   }

@@ -21,3 +21,4 @@ export type ControllerClass =
 
 export type StockadeHttpRequest = FastifyRequest;
 export type StockadeHttpReply = FastifyReply<ServerResponse>;
+
