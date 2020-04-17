@@ -8,3 +8,5 @@ export * from './hooks';
 export * from './inject-keys';
 
 export * from './types';
+
+export * from './HttpTester';

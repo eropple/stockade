@@ -109,8 +109,6 @@ export function makeEndpointSchemaForFastify(
 ): RouteSchema {
   const ret: RouteSchema = {};
 
-  console.log(endpointInfo.controller, endpointInfo.handlerName, allParameters);
-
   const { requestBody } = endpointInfo;
   if (requestBody) {
     ret.body = document.inferOrReference(requestBody.schema);

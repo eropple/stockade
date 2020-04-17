@@ -65,12 +65,12 @@ describe('metadata utils', () => {
     expect(controllerInfo.controller).toBe(TestController1);
 
     expect(controllerInfo.endpoints.testGet).toMatchObject({
-      [AnnotationKeys.ROUTE_METHOD]: 'get',
+      [AnnotationKeys.ROUTE_METHOD]: 'GET',
       [AnnotationKeys.ROUTE_PATH]: '',
     });
 
     expect(controllerInfo.endpoints.testPost).toMatchObject({
-      [AnnotationKeys.ROUTE_METHOD]: 'post',
+      [AnnotationKeys.ROUTE_METHOD]: 'POST',
       [AnnotationKeys.ROUTE_PATH]: 'post',
     });
   });

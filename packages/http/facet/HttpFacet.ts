@@ -1,6 +1,7 @@
 import * as Fastify from 'fastify';
 import * as hyperid from 'hyperid';
 import { JSONSchema7 } from 'json-schema';
+import { isNullOrUndefined } from 'util';
 
 import { DEPENDENCY_LIFECYCLE, FacetBase, IAppSpec, IFacetBehavior, IModule, LOGGER } from '@stockade/core';
 import { Domain, LifecycleInstance } from '@stockade/inject';
@@ -38,6 +39,10 @@ const DEFAULT_HTTP_PORT = 10080;
 const HTTP_BEHAVIOR: IFacetBehavior = {
   facetRootLifecycle: HTTP,
 };
+
+export function isHttpFacet(obj: unknown): obj is HttpFacet {
+  return (obj instanceof HttpFacet);
+}
 
 export class HttpFacet extends FacetBase {
   readonly fastify: Fastify.FastifyInstance;
@@ -381,7 +386,10 @@ export class HttpFacet extends FacetBase {
           const endpointPath = endpointInfo[AnnotationKeys.ROUTE_PATH];
           const endpointOptions = endpointInfo[AnnotationKeys.ROUTE_OPTIONS];
           const method = endpointInfo[AnnotationKeys.ROUTE_METHOD];
-          const url = `/${stripPathSlashes(controllerPathBase)}/${stripPathSlashes(endpointPath)}`;
+          const url = [
+            controllerPathBase ? controllerPathBase : null,
+            endpointPath,
+          ].filter(f => !isNullOrUndefined(f)).map(p => stripPathSlashes(p!)).join('/');
 
           const endpointParameterResolvers: Array<IParameterResolver> =
             extractParameterResolversFromParameters(endpointInfo);

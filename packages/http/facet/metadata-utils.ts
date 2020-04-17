@@ -77,7 +77,6 @@ function extractMappedEndpointMetadata(
           schema = Schematizer.inferBaseType(schema) ?? schema;
         }
 
-
         implicitParameterInfo = {
           ...implicitParameterInfo,
           schema,
