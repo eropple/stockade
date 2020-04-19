@@ -15,7 +15,7 @@ class RBody {
 }
 
 @Controller()
-class TestController {
+class SchemasTestController {
   @Get('path-args/:bar')
   pathGet(
     @Path('bar') bar: number,
@@ -58,7 +58,7 @@ describe('schemas and in/out parameters', () => {
     const runner = new Runner({
       appSpec:
         App()
-          .apply(HttpApp().controllers(TestController)),
+          .apply(HttpApp().controllers(SchemasTestController)),
       facets: [
         httpFacet({ fastify: { listen: { port: 0 } } }),
       ],
