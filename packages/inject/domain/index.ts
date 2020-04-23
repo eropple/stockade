@@ -2,4 +2,4 @@ export * from './IDomainDefinition';
 export * from './Domain';
 export * from './types';
 export * from './definition-helpers';
-export { DependencyKey } from './dependency-utils';
+export { DependencyKey, forKey } from './dependency-utils';

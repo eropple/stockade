@@ -186,7 +186,7 @@ describe('integrated DI tests', () => {
       expect(obj.a).not.toBe(obj2.a);
     });
 
-    it('should prefer the use of a reigstered temporary over a dependency when resolving', async () => {
+    it('should prefer the use of a registered temporary over a dependency when resolving', async () => {
       const domain = Domain.fromDefinition({
         name: 'test',
         provides: [
@@ -232,6 +232,21 @@ describe('integrated DI tests', () => {
 
       expect(obj1).toBe(obj2);
       expect(obj1.num).toBe(obj2.num);
+    });
+
+    it('should handle async factory providers', async () => {
+      const domain = Domain.fromDefinition({
+        name: 'test',
+        provides: [
+          bind('qwop').in(GLOBAL).toValue(32),
+          bind('a').in(GLOBAL).toFactory({ inject: ['qwop'], fn: async (qwop: number) => qwop }),
+        ],
+      });
+
+      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+
+      const result = await lifecycle.resolve(forKey('a'), domain);
+      expect(result).toBe(32);
     });
 
     it('should handle multiply referenced dependencies', async () => {

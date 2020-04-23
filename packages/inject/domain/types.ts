@@ -4,6 +4,8 @@ import { ILifecycle, LifecycleInstance, SINGLETON } from '../lifecycle';
 import { DependencyKey } from './dependency-utils';
 import { Domain } from './Domain';
 
+export type PromiseOr<T> = T | Promise<T>;
+
 export interface IProviderDefinitionBase {
   key: DependencyKey;
   lifecycle?: ILifecycle;
@@ -36,7 +38,7 @@ export interface IClassProviderDefinition<T = any> extends IProviderDefinitionBa
  */
 export interface IFactoryProviderDefinition<T = any> extends IProviderDefinitionBase {
   inject?: Array<DependencyKey>;
-  fn: (...args: Array<any>) => T;
+  fn: (...args: Array<any>) => PromiseOr<T>;
 }
 
 export type IProviderDefinition<T = any> =
@@ -84,7 +86,7 @@ export interface IDomainValueProvider<T = any> extends IDomainProviderBase {
 
 export interface IDomainFactoryProvider<T = any> extends IDomainProviderBase {
   inject: Array<symbol>;
-  fn: (...args: Array<any>) => T;
+  fn: (...args: Array<any>) => PromiseOr<T>;
   extractedFromAutoComponent: boolean;
 }
 

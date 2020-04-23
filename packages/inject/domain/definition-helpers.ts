@@ -2,10 +2,11 @@ import { Class } from 'utility-types';
 
 import { ILifecycle, SINGLETON } from '../lifecycle';
 import { DependencyKey } from './dependency-utils';
-import { IClassProviderDefinition, IFactoryProviderDefinition, IValueProviderDefinition } from './types';
+import { IClassProviderDefinition, IFactoryProviderDefinition, IValueProviderDefinition, PromiseOr } from './types';
 
 // tslint:disable-next-line: interface-over-type-literal
-export type ToFactoryArgs<T = any> = { inject: Array<DependencyKey>, fn: (...args: Array<any>) => T };
+export type ToFactoryArgs<T = any> =
+  { inject: Array<DependencyKey>, fn: (...args: Array<any>) => PromiseOr<T> };
 
 export interface IProviderBuildTerminal {
   toValue<T = any>(value: T): IValueProviderDefinition<T>;
@@ -43,10 +44,7 @@ export class ProviderDefinitionKeyLifecycleHelper implements IProviderBuildTermi
   }
 
   // TODO: can this be genericized intelligently? (probably not tbh)
-  toFactory<T = any>(args: {
-    inject: Array<DependencyKey>,
-    fn: (...args: Array<any>) => T,
-  }): IFactoryProviderDefinition<T> {
+  toFactory<T = any>(args: ToFactoryArgs<T>): IFactoryProviderDefinition<T> {
     return { key: this.key, lifecycle: this.lifecycle, inject: args.inject, fn: args.fn };
   }
 }
