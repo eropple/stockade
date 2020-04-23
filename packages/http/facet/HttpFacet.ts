@@ -4,7 +4,7 @@ import { JSONSchema7 } from 'json-schema';
 import { isNullOrUndefined } from 'util';
 
 import { DEPENDENCY_LIFECYCLE, FacetBase, IAppSpec, IFacetBehavior, IModule, LOGGER } from '@stockade/core';
-import { Domain, LifecycleInstance } from '@stockade/inject';
+import { Domain, LifecycleInstance, Resolver } from '@stockade/inject';
 import { Logger } from '@stockade/utils/logging';
 
 import { AnnotationKeys } from '../annotations/keys';
@@ -32,7 +32,14 @@ import {
 import { IHttpOptions } from './IHttpOptions';
 import { HTTP, HTTP_REQUEST } from './lifecycle';
 import { buildSchematizer, extractParameterResolversFromParameters } from './schemas';
-import { bindSchematizerToFastify, extractHooks, findControllers, findHooks, getAllParametersForEndpoint, makeEndpointSchemaForFastify } from './utils';
+import {
+  bindSchematizerToFastify,
+  extractHooks,
+  findControllers,
+  findHooks,
+  getAllParametersForEndpoint,
+  makeEndpointSchemaForFastify,
+} from './utils';
 
 const DEFAULT_HTTP_PORT = 10080;
 
@@ -361,6 +368,10 @@ export class HttpFacet extends FacetBase {
     // actually registers this schema with Fastify
     const jsonSchemaDocument = bindSchematizerToFastify(schematizer, fastifyBase);
 
+    // This just reduces the number of args to pass to our controller events and also
+    // provides some encapsulation over thelifecycle/domain stuff.
+    const controllerEventResolver: Resolver = new Resolver(this.lifecycleInstance, this.domain);
+
     for (const controllerInfo of this._allControllers) {
       const controller = controllerInfo.controller;
       const controllerName = controller.name;
@@ -370,8 +381,8 @@ export class HttpFacet extends FacetBase {
       // Each controller will be loaded as a separate Fastify module.
       fastifyBase.register(async (fastify) => {
         if (controller.onRegisterStart) {
-          cLogger.trace('Calling user-defined onRegisterStart.');
-          controller.onRegisterStart(fastify);
+          cLogger.fatal('Calling user-defined onRegisterStart.');
+          await controller.onRegisterStart(fastify, controllerEventResolver);
         }
 
         const controllerPathBase = controllerInfo[AnnotationKeys.CONTROLLER_INFO].basePath;
@@ -380,7 +391,8 @@ export class HttpFacet extends FacetBase {
           const eLogger = cLogger.child({ handlerName });
           if (controller.onEndpointRegisterStart) {
             eLogger.trace('Calling user-defined onEndpointRegisterStart.');
-            controller.onEndpointRegisterStart(fastify, handlerName, endpointInfo);
+            await controller.onEndpointRegisterStart(
+              fastify, controllerEventResolver, handlerName, endpointInfo);
           }
 
           const endpointPath = endpointInfo[AnnotationKeys.ROUTE_PATH];
@@ -450,13 +462,14 @@ export class HttpFacet extends FacetBase {
 
           if (controller.onEndpointRegisterEnd) {
             eLogger.trace('Calling user-defined onEndpointRegisterEnd.');
-            controller.onEndpointRegisterEnd(fastify, handlerName, endpointInfo);
+            await controller.onEndpointRegisterEnd(
+              fastify, controllerEventResolver, handlerName, endpointInfo);
           }
         }
 
         if (controller.onRegisterEnd) {
           cLogger.trace('Calling user-defined onRegisterEnd.');
-          controller.onRegisterEnd(fastify);
+          await controller.onRegisterEnd(fastify, controllerEventResolver);
         }
       });
     }

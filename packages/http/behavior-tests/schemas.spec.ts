@@ -1,8 +1,10 @@
 // tslint:disable: no-magic-numbers
 import { App, AppSpecBuilder, Runner } from '@stockade/core';
-import { Controller, FastifyRequest, Get, HttpApp, httpFacet, Path, Post, Query, Request, RequestBody } from '@stockade/http';
 import { Model, Prop } from '@stockade/schemas';
 
+import { Controller, Get, Header, Path, Post, Query, RequestBody } from '../annotations';
+import { HttpApp } from '../builder';
+import { httpFacet } from '../facet';
 import { HttpTester } from '../HttpTester';
 
 @Model()
@@ -37,6 +39,20 @@ class SchemasTestController {
     return { baz, other: 'yes' };
   }
 
+  @Get('header-args')
+  headerGet(
+    @Header('my-header') headerValue: number,
+  ) {
+    return { value: headerValue };
+  }
+
+  @Get('header-args/optional')
+  headerOptionalGet(
+    @Header('my-header', { schema: Number, required: false }) headerValue?: number,
+  ) {
+    return { value: headerValue, other: 'yes' };
+  }
+
   @Get('no-args')
   noArgsGet() {
     return { hello: 'world' };
@@ -47,6 +63,18 @@ class SchemasTestController {
     @RequestBody(RBody) body: RBody,
   ) {
     return body;
+  }
+
+  @Post('request-body-test-alt')
+  requestBodyAlt(
+    @RequestBody({
+      type: 'object',
+      properties: {
+        hello: { type: 'string' },
+      }
+    }) body: { hello: string },
+  ) {
+    return { value: body.hello };
   }
 }
 
@@ -106,6 +134,24 @@ describe('schemas and in/out parameters', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('should coerce correct header arguments', async () => {
+    const res = await tester.inject({ method: 'GET', url: '/header-args', headers: { 'my-header': 37 } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ value: 37 });
+  });
+
+  it('should reject bad header arguments', async () => {
+    const res = await tester.inject({ method: 'GET', url: '/header-args', headers: { 'my-header': 'moop' } });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().message).toBe('headers[\'my-header\'] should be number');
+  });
+
+  it('should not fail on optional header arguments', async () => {
+    const res = await tester.inject({ method: 'GET', url: '/header-optional'});
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ other: 'yes' });
+  });
+
   it('should coerce correct simple request bodies', async () => {
     const res = await tester.inject({
       method: 'POST', url: '/rbody-test',
@@ -126,5 +172,16 @@ describe('schemas and in/out parameters', () => {
 
     expect(res.json().message).toBe('body.foo should be number');
     expect(res.statusCode).toBe(400);
+  });
+
+  it('should handle JSON Schema request bodies', async () => {
+    const res = await tester.inject({
+      method: 'POST', url: '/request-body-test-alt',
+      headers: { 'content-type': 'application/json' },
+      payload: { hello: 'world' },
+    });
+
+    expect(res.json()).toMatchObject({ value: 'world' });
+    expect(res.statusCode).toBe(200);
   });
 });

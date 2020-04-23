@@ -10,3 +10,6 @@ export {
   GLOBAL,
   SINGLETON,
 } from './lifecycle';
+
+export * from './types';
+export * from './resolver';

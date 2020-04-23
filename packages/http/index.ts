@@ -10,3 +10,5 @@ export * from './inject-keys';
 export * from './types';
 
 export * from './HttpTester';
+
+export { FastifyInstance } from 'fastify';
