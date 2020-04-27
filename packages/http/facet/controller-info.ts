@@ -134,6 +134,7 @@ export interface IMappedEndpointBasic {
 export interface IMappedEndpointDetailed extends IMappedEndpointBasic {
   readonly controller: ControllerClass;
   readonly handlerName: string;
+  readonly fullUrlPath: string;
   readonly parameters: ReadonlyMap<number, IMappedEndpointParameter>;
 
   readonly requestBody?: IMappedEndpointRequestBody;

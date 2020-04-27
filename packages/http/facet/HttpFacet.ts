@@ -21,7 +21,7 @@ import {
   IPreValidationHook,
 } from '../hooks';
 import { CONTROLLERS, REPLY, REQUEST, SCHEMATIZER } from '../inject-keys';
-import { stripPathSlashes } from '../utils';
+import { assembleUrlPath, stripPathSlashes } from '../utils';
 import {
   buildMappedControllerInfo,
   IMappedController,
@@ -399,10 +399,7 @@ export class HttpFacet extends FacetBase {
           const endpointPath = endpointInfo[AnnotationKeys.ROUTE_PATH];
           const endpointOptions = endpointInfo[AnnotationKeys.ROUTE_OPTIONS];
           const method = endpointInfo[AnnotationKeys.ROUTE_METHOD];
-          const url = [
-            controllerPathBase ? controllerPathBase : null,
-            endpointPath,
-          ].filter(f => !isNullOrUndefined(f)).map(p => stripPathSlashes(p!)).join('/');
+          const url = endpointInfo.fullUrlPath
 
           const endpointParameterResolvers: Array<IParameterResolver> =
             extractParameterResolversFromParameters(endpointInfo);

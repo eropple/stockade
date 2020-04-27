@@ -14,9 +14,11 @@ import {
 
 import { AnnotationKeys } from '../annotations/keys';
 import { ControllerClass } from '../types';
-import { HTTPMethodsWithBodies } from '../utils';
+import { assembleUrlPath, HTTPMethodsWithBodies } from '../utils';
 import {
   IMappedController,
+  IMappedControllerBasic,
+  IMappedControllerInfo,
   IMappedEndpointDetailed,
   IMappedEndpointParameter,
   IParameterResolver,
@@ -34,16 +36,19 @@ export function extractMappedControllerMetadata(
     throw new Error(`Controller class '${controller.name}' lacks Controller annotation.`);
   }
 
+  const controllerInfo = controllerBase['@stockade/http:CONTROLLER_INFO'];
+
   return {
     ...controllerBase,
     controller,
     domain,
-    endpoints: extractMappedEndpointMetadata(controller),
+    endpoints: extractMappedEndpointMetadata(controller, controllerInfo),
   };
 }
 
 function extractMappedEndpointMetadata(
   controller: ControllerClass,
+  controllerInfo: IMappedControllerInfo,
 ): { [name: string]: IMappedEndpointDetailed } {
   const ret: { [name: string]: IMappedEndpointDetailed } = {};
 
@@ -56,6 +61,7 @@ function extractMappedEndpointMetadata(
     let endpointInfo: IMappedEndpointDetailed = {
       ...endpointBasicInfo,
       controller,
+      fullUrlPath: assembleUrlPath(controllerInfo.basePath, endpointBasicInfo['@stockade/http:ROUTE_PATH']),
       handlerName,
       parameters, // this will be mutable in-function and that is a minor sin, but it's OK
       requestBody: undefined,
