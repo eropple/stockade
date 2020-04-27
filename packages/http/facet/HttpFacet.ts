@@ -374,6 +374,7 @@ export class HttpFacet extends FacetBase {
 
     for (const controllerInfo of this._allControllers) {
       const controller = controllerInfo.controller;
+
       const controllerName = controller.name;
       const cLogger = this.logger.child({ controllerName });
       cLogger.debug(`Registering Fastify module for '${controllerName}'.`);
@@ -381,7 +382,7 @@ export class HttpFacet extends FacetBase {
       // Each controller will be loaded as a separate Fastify module.
       fastifyBase.register(async (fastify) => {
         if (controller.onRegisterStart) {
-          cLogger.fatal('Calling user-defined onRegisterStart.');
+          cLogger.trace('Calling user-defined onRegisterStart.');
           await controller.onRegisterStart(fastify, controllerEventResolver);
         }
 

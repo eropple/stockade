@@ -1,5 +1,13 @@
+
+import { OpenAPIObject } from 'openapi3-ts';
+
+import { LOGGER } from '@stockade/core';
 import { Controller, FastifyInstance } from '@stockade/http';
-import { LifecycleInstance, Resolver } from '@stockade/inject';
+import { Resolver } from '@stockade/inject';
+import { Logger } from '@stockade/utils/logging';
+
+import { OAS3_CONFIG, OpenAPIConfig } from './config';
+import { OAS3_DOCUMENT } from './oas3-document.provider';
 
 /**
  * This controller provides the underlying logic for serving OpenAPI3 documents.
@@ -27,6 +35,28 @@ import { LifecycleInstance, Resolver } from '@stockade/inject';
 @Controller()
 export class OAS3Controller {
   static async onRegisterStart(fastify: FastifyInstance, resolver: Resolver) {
-    const oasDocument = await resolver.resolve('OAS3_DOCUMENT');
+    const [baseLogger, oasConfig, oasDocument] = await Promise.all([
+      resolver.resolve(LOGGER) as Promise<Logger>,
+      resolver.resolve(OAS3_CONFIG) as Promise<OpenAPIConfig>,
+      resolver.resolve(OAS3_DOCUMENT) as Promise<OpenAPIObject>,
+    ]);
+
+    const logger = baseLogger.child({ component: OAS3Controller.name });
+
+    if (oasConfig.disabled) {
+      logger.info(`OAS3 JSON is disabled.`);
+    } else {
+      let oasPath = oasConfig.path ?? 'openapi.json';
+      if (oasPath[0] !== '/') {
+        oasPath = `/${oasPath}`;
+      }
+      logger.info(`Registering OAS3 JSON to '${oasPath}'.`);
+
+      fastify.route({
+        method: 'GET',
+        url: oasPath,
+        handler: async (_req, reply) => reply.header('content-type', 'application/json').send(oasDocument),
+      });
+    }
   }
 }

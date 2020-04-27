@@ -1,19 +1,24 @@
 import { InfoObject, OpenAPIObject } from 'openapi3-ts';
 
-// This could be an injected class but I don't want to poison the namespace
-// with it; we only ever
-export class OASBuilder {
-  constructor(
-    private readonly info: InfoObject,
-  ) {}
+import { IMappedController } from '@stockade/http';
 
-  async build(controllers: any): Promise<OpenAPIObject> {
-    const doc: OpenAPIObject = {
-      openapi: '3.1',
-      info: this.info,
-      paths: {},
-    };
+import { OAS3Controller } from '../oas3.controller';
 
-    return doc;
+export async function buildOAS3(
+  info: InfoObject,
+  controllers: ReadonlyArray<IMappedController>,
+): Promise<OpenAPIObject> {
+  const doc: OpenAPIObject = {
+    openapi: '3.1',
+    info,
+    paths: {},
+  };
+
+  for (const controllerInfo of controllers) {
+    if (controllerInfo.controller === OAS3Controller) { continue; }
+
+    console.log(controllerInfo);
   }
+
+  return doc;
 }
