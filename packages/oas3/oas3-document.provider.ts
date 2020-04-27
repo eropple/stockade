@@ -13,12 +13,14 @@ export const oas3DocumentProvider: IFactoryProviderDefinition<OpenAPIObject> = {
   lifecycle: HTTP,
   inject: [CONTROLLERS, SCHEMATIZER, OAS3_CONFIG],
   fn: async (c: ReadonlyArray<IMappedController>, schematizer: Schematizer, config: OpenAPIConfig) => {
+    // TODO: inject logger down into the OAS3 builder
     const doc = await buildOAS3(config.info, c, schematizer);
 
     if (config.modifyFn) {
       await config.modifyFn(doc);
     }
 
+    // TODO: validate document and log any errors; optionally kill server on start if not correct
     return doc;
   }
 };
