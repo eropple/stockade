@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 
 export * from './facet';
-export * from './builder';
+export * from './http-builder';
 export * from './annotations';
 export * from './hooks';
 
@@ -12,3 +12,5 @@ export * from './types';
 export * from './HttpTester';
 
 export { FastifyInstance } from 'fastify';
+
+export * from './http-statuses';

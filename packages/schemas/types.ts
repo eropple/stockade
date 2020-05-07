@@ -1,6 +1,14 @@
 import { JSONSchema7, JSONSchema7Definition } from 'json-schema';
 import { Class } from 'utility-types';
 
+/**
+ * The widest "schema" type available. This includes:
+ *
+ * -  a class (which should be annotated with Model/ModelRaw and Prop/PropRaw)
+ * -  a JSON schema
+ * -  a hybrid of the two: a JSON schema where its subtypes, such as `allOf` and
+ *    `contains`, are themselves model classes.
+ */
 export type Schema = Class<any> | SchemaWithClassTypes | JSONSchema7;
 
 export type SchemaWithClassTypes = JSONSchema7 & {

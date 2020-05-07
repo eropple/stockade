@@ -1,25 +1,16 @@
-import { FastifyError, FastifyReply } from 'fastify';
+import { App, Runner } from '@stockade/core';
+import { Model, Prop } from '@stockade/schemas';
 
-import { Runner, App } from '@stockade/core';
-import { Inject } from '@stockade/inject';
-
-import * as http from 'http';
-
-import { Controller, FastifyRequest, Get, Post, Delete, Put, Patch } from '../annotations';
-import { HttpApp } from '../builder';
+import { Controller, Delete, Get, Patch, Post, Put } from '../annotations';
 import { httpFacet } from '../facet';
-import {
-  IOnErrorHook,
-  IOnRequestHook,
-  IOnResponseHook,
-  IOnSendHook,
-  IPreHandlerHook,
-  IPreParsingHook,
-  IPreSerializationHook,
-  IPreValidationHook,
-} from '../hooks';
+import { HttpApp } from '../http-builder';
 import { HttpTester } from '../HttpTester';
-import { REQUEST } from '../inject-keys';
+
+@Model()
+class MethodObject {
+  @Prop()
+  method!: string;
+}
 
 describe('hooks tests', () => {
   let tester!: HttpTester;
@@ -47,27 +38,27 @@ describe('hooks tests', () => {
   @Controller()
   class RequestsTestController {
     @Get()
-    methodGet() {
+    methodGet(): MethodObject {
       return { method: 'get' };
     }
 
     @Post()
-    methodPost() {
+    methodPost(): MethodObject {
       return { method: 'post' };
     }
 
     @Delete()
-    methodDelete() {
+    methodDelete(): MethodObject {
       return { method: 'delete' };
     }
 
     @Put()
-    methodPut() {
+    methodPut(): MethodObject {
       return { method: 'put' };
     }
 
     @Patch()
-    methodPatch() {
+    methodPatch(): MethodObject {
       return { method: 'patch' };
     }
   }

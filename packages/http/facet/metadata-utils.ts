@@ -1,9 +1,8 @@
 import 'reflect-metadata';
-import { inspect } from 'util';
 
 import { IModule } from '@stockade/core';
 import { Domain } from '@stockade/inject';
-import { Schema, Schematizer, SchemaWithClassTypes } from '@stockade/schemas';
+import { Schematizer } from '@stockade/schemas';
 import { StockadeError } from '@stockade/utils/error';
 import {
   getAllMetadataForClass,
@@ -13,8 +12,8 @@ import {
 } from '@stockade/utils/metadata';
 
 import { AnnotationKeys } from '../annotations/keys';
+import { HttpStatus } from '../http-statuses';
 import { ControllerClass } from '../types';
-import { assembleUrlPath, HTTPMethodsWithBodies } from '../utils';
 import {
   IMappedController,
   IMappedControllerBasic,
@@ -24,8 +23,11 @@ import {
   IParameterResolver,
   isMappedControllerBasic,
   isMappedEndpointBasic,
+  isMethodReturnByCode,
   MappedEndpointParameter,
-} from './controller-info';
+  MethodReturnByCode,
+} from '../types/controller-info';
+import { assembleUrlPath, HTTPMethodsWithBodies } from '../utils';
 
 export function extractMappedControllerMetadata(
   controller: ControllerClass,
@@ -57,14 +59,44 @@ function extractMappedEndpointMetadata(
     const endpointBasicInfo = getAllPropertyMetadataForClass(controller, handlerName);
     if (!isMappedEndpointBasic(endpointBasicInfo)) { continue; }
 
+
     const parameters: Map<number, IMappedEndpointParameter> = new Map();
+
+    const returnCode: number =
+      endpointBasicInfo['@stockade/http:ROUTE_OPTIONS'].returnCode
+        ?? endpointBasicInfo['@stockade/http:ROUTE_METHOD'] === 'POST'
+            // tslint:disable-next-line: no-magic-numbers
+            ? HttpStatus.CREATED
+            : HttpStatus.OK;
+
+    const endpointInfoReturns = endpointBasicInfo['@stockade/http:ROUTE_OPTIONS'].returns;
+    const designReturnType = endpointBasicInfo['design:returntype'];
+    const responses: MethodReturnByCode =
+      endpointInfoReturns === false
+        ? {}
+        : endpointInfoReturns
+          ? isMethodReturnByCode(endpointInfoReturns)
+            ? endpointInfoReturns
+            : { [returnCode]: endpointInfoReturns }
+          : designReturnType
+            ? { [returnCode]: designReturnType }
+            : {};
+
+
     let endpointInfo: IMappedEndpointDetailed = {
       ...endpointBasicInfo,
       controller,
       fullUrlPath: assembleUrlPath(controllerInfo.basePath, endpointBasicInfo['@stockade/http:ROUTE_PATH']),
       handlerName,
       parameters, // this will be mutable in-function and that is a minor sin, but it's OK
-      requestBody: undefined,
+
+      returnCode,
+      responses,
+      requestBody: undefined, // this is also mutable in-function; sucks, but we deal.
+      '@stockade/http:ROUTE_OPTIONS': {
+        ...(endpointBasicInfo['@stockade/http:ROUTE_OPTIONS'] || {}),
+
+      }
     };
 
     const baseParameters = getPropertyParameterMetadataForClass(controller, handlerName);
@@ -120,4 +152,11 @@ function extractMappedEndpointMetadata(
   }
 
   return ret;
+}
+
+export function buildMappedControllerInfo(
+  controllers: ReadonlyArray<[ControllerClass, Domain<IModule>]>,
+): Array<IMappedController> {
+  return controllers
+    .map(([c, d]) => extractMappedControllerMetadata(c, d));
 }

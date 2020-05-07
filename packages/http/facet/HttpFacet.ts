@@ -1,7 +1,6 @@
 import * as Fastify from 'fastify';
 import * as hyperid from 'hyperid';
 import { JSONSchema7 } from 'json-schema';
-import { isNullOrUndefined } from 'util';
 
 import { DEPENDENCY_LIFECYCLE, FacetBase, IAppSpec, IFacetBehavior, IModule, LOGGER } from '@stockade/core';
 import { Domain, LifecycleInstance, Resolver } from '@stockade/inject';
@@ -21,16 +20,13 @@ import {
   IPreValidationHook,
 } from '../hooks';
 import { CONTROLLERS, REPLY, REQUEST, SCHEMATIZER } from '../inject-keys';
-import { assembleUrlPath, stripPathSlashes } from '../utils';
 import {
-  buildMappedControllerInfo,
   IMappedController,
-  IMappedEndpointDetailed,
   IParameterResolver,
-  MappedEndpointParameter,
-} from './controller-info';
+} from '../types/controller-info';
 import { IHttpOptions } from './IHttpOptions';
 import { HTTP, HTTP_REQUEST } from './lifecycle';
+import { buildMappedControllerInfo } from './metadata-utils';
 import { buildSchematizer, extractParameterResolversFromParameters } from './schemas';
 import {
   bindSchematizerToFastify,
@@ -386,8 +382,6 @@ export class HttpFacet extends FacetBase {
           await controller.onRegisterStart(fastify, controllerEventResolver);
         }
 
-        const controllerPathBase = controllerInfo[AnnotationKeys.CONTROLLER_INFO].basePath;
-
         for (const [handlerName, endpointInfo] of Object.entries(controllerInfo.endpoints)) {
           const eLogger = cLogger.child({ handlerName });
           if (controller.onEndpointRegisterStart) {
@@ -406,7 +400,12 @@ export class HttpFacet extends FacetBase {
 
           const allParameters = getAllParametersForEndpoint(endpointInfo);
 
-          const routeSchema = makeEndpointSchemaForFastify(endpointInfo, allParameters, jsonSchemaDocument);
+          const routeSchema = makeEndpointSchemaForFastify(
+            eLogger,
+            endpointInfo,
+            allParameters,
+            jsonSchemaDocument,
+          );
           eLogger.debug({ method, url, routeSchema }, `Defining route ${method} ${url}.`);
           fastify.route({
             method,
@@ -442,9 +441,7 @@ export class HttpFacet extends FacetBase {
 
               if (!endpointOptions.manualReturn) {
                 // happy path return: do the presumably right thing with the returned data
-                if (endpointOptions.returnCode) {
-                  reply.status(endpointOptions.returnCode);
-                }
+                reply.status(endpointInfo.returnCode);
 
                 return ret;
               // tslint:disable-next-line: unnecessary-else

@@ -1,7 +1,7 @@
 import { Schematizer } from '@stockade/schemas';
 import { Logger } from '@stockade/utils/logging';
 
-import { IMappedController, IMappedEndpointDetailed, IParameterResolver } from './controller-info';
+import { IMappedController, IMappedEndpointDetailed, IParameterResolver } from '../types/controller-info';
 import { getAllParametersForEndpoint } from './utils';
 
 export function buildSchematizer(logger: Logger, controllers: ReadonlyArray<IMappedController>): Schematizer {

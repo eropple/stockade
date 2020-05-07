@@ -20,15 +20,18 @@
     "build": "tsc",
     "watch": "yarn run -s build --watch",
     "log:parse": "yarn exec -s -- pino-pretty -t",
-    "test": "jest",
+    "test": "jest $JEST_ARGS",
     "test:pretty": "bash -c 'yarn run -s test 2> >(yarn run -s log:parse >&2)'",
     "test:verbose": "cross-env STOCKADE_UTILS_FALLBACK_LOGGER_LEVEL=debug jest",
     "test:verbose:pretty": "bash -c 'yarn run -s test:verbose 2> >(yarn run -s log:parse >&2)'"
   },
   "dependencies": {
     "fastify": "2.12.1",
+    "http-status-codes": "1.4.0",
     "hyperid": "2.0.3",
     "lodash": "4.17.15",
+    "numeral": "2.0.6",
+    "openapi3-ts": "1.3.0",
     "reflect-metadata": "0.1.13",
     "runtypes": "4.2.0",
     "utility-types": "3.10.0"
@@ -41,6 +44,7 @@
     "@stockade/core": "0.1.0",
     "@types/lodash": "4.14.149",
     "@types/node": "13.9.0",
+    "@types/numeral": "0.0.27",
     "@types/uuid": "^3.4.7",
     "json-schema": "0.2.5"
   }

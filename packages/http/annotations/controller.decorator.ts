@@ -3,7 +3,7 @@ import { Class } from 'utility-types';
 
 import { classMergeObjectMetadata, classSetMetadata } from '@stockade/utils/metadata';
 
-import { IMappedController, IMappedControllerInfo } from '../facet/controller-info';
+import { IMappedController, IMappedControllerInfo } from '../types/controller-info';
 import { AnnotationKeys } from './keys';
 
 export const DEFAULT_ARGS: IMappedControllerInfo = {

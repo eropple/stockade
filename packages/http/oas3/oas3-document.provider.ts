@@ -5,7 +5,7 @@ import { IFactoryProviderDefinition } from '@stockade/inject';
 import { Schematizer } from '@stockade/schemas';
 
 import { OAS3_CONFIG, OpenAPIConfig } from './config';
-import { buildOAS3 } from './oas-builder';
+import { OASBuilder } from './oas-builder';
 
 export const OAS3_DOCUMENT = Symbol.for('@stockade/oas3:OAS3_DOCUMENT');
 export const oas3DocumentProvider: IFactoryProviderDefinition<OpenAPIObject> = {
@@ -14,7 +14,8 @@ export const oas3DocumentProvider: IFactoryProviderDefinition<OpenAPIObject> = {
   inject: [CONTROLLERS, SCHEMATIZER, OAS3_CONFIG],
   fn: async (c: ReadonlyArray<IMappedController>, schematizer: Schematizer, config: OpenAPIConfig) => {
     // TODO: inject logger down into the OAS3 builder
-    const doc = await buildOAS3(config.info, c, schematizer);
+    const builder = new OASBuilder(schematizer);
+    const doc = await builder.build(c, config.info);
 
     if (config.modifyFn) {
       await config.modifyFn(doc);

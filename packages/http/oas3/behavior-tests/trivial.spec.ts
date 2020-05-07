@@ -1,7 +1,9 @@
 import { App, Runner } from '@stockade/core';
-import { HttpApp, httpFacet, HttpTester } from '@stockade/http';
 import { bind, SINGLETON } from '@stockade/inject';
 
+import { httpFacet } from '../../facet';
+import { HttpApp } from '../../http-builder';
+import { HttpTester } from '../../HttpTester';
 import { OAS3_CONFIG, OpenAPIConfig } from '../config';
 import { OAS3Module } from '../oas3.module';
 

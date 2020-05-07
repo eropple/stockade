@@ -4,17 +4,34 @@ import { App, Runner } from '@stockade/core';
 import { Controller, HttpApp, httpFacet, HttpTester } from '@stockade/http';
 import { bind, SINGLETON } from '@stockade/inject';
 
+import { Get } from '../../annotations';
 import { OAS3_CONFIG, OpenAPIConfig } from '../config';
 import { OAS3Module } from '../oas3.module';
 
 @Controller()
 class AController {
+  @Get()
+  myGet(): number {
+    return 5;
+  }
 
+  @Get('with-route')
+  myGetWithRoute(): number {
+    return 50;
+  }
 }
 
 @Controller({ basePath: 'b' })
 class BController {
+  @Get()
+  myGet(): number {
+    return 10;
+  }
 
+  @Get('with-route')
+  myGetWithRoute(): number {
+    return 100;
+  }
 }
 
 describe('oas3 controller behavior tests', () => {
@@ -49,5 +66,9 @@ describe('oas3 controller behavior tests', () => {
     tester = new HttpTester(runner);
 
     doc = (await tester.inject({ url: '/openapi.json' })).json() as OpenAPIObject;
+  });
+
+  it('should describe in OAS3 a basic GET', async () => {
+    console.log(JSON.stringify(doc, null, 2));
   });
 })

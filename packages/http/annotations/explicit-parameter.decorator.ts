@@ -1,6 +1,6 @@
 import { AppendArrayMetadata } from '@stockade/utils/metadata';
 
-import { MappedEndpointParameter } from '../facet/controller-info';
+import { MappedEndpointParameter } from '../types/controller-info';
 import { AnnotationKeys } from './keys';
 
 export function ExplicitParameter(param: MappedEndpointParameter) {

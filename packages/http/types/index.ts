@@ -4,7 +4,9 @@ import { Class } from 'utility-types';
 
 import { PromiseOr, Resolver } from '@stockade/inject';
 
-import { IMappedEndpointDetailed } from './facet/controller-info';
+import { IMappedEndpointDetailed } from './controller-info';
+
+export * from './controller-info';
 
 export type ControllerClass =
   & Class<any>

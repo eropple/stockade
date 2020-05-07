@@ -1,16 +1,54 @@
 import { HTTPMethod } from 'fastify';
+import numeral from 'numeral';
+import { CallbacksObject, ExternalDocumentationObject, ResponsesObject } from 'openapi3-ts';
 import { Class } from 'utility-types';
 
 import { IModule } from '@stockade/core';
 import { Domain } from '@stockade/inject';
-import { Schema, SchemaWithClassTypes } from '@stockade/schemas';
+import { Schema } from '@stockade/schemas';
 import { IParameterMetadata, RETURN_DESIGN_TYPE } from '@stockade/utils/metadata';
-import { StringTo } from '@stockade/utils/types';
 
 import { AnnotationKeys } from '../annotations/keys';
 import { FastifyHookClass } from '../hooks';
 import { ControllerClass } from '../types';
-import { extractMappedControllerMetadata } from './metadata-utils';
+
+export interface IOAS3ControllerOrEndpointInfo {
+  /**
+   * Categorization tags for endpoints in your OAS3 doc. Controller-level tags will
+   * percolate down to endpoints.
+   */
+  readonly tags?: ReadonlyArray<string>;
+  readonly deprecated?: boolean;
+}
+
+export interface IOAS3EndpointInfo extends IOAS3ControllerOrEndpointInfo {
+  readonly tags?: ReadonlyArray<string>;
+
+  /**
+   * By default, OAS3 will use your handler name as the operation ID. If you want a
+   * custom one, set this.
+   */
+  readonly operationId?: string;
+  readonly summary?: string;
+  readonly description?: string;
+  /**
+   * OAS3 external documentation object, as defined here:
+   *
+   * https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#externalDocumentationObject
+   */
+  readonly externalDocs?: ExternalDocumentationObject,
+  readonly callbacks?: CallbacksObject;
+  /**
+   * OAS3 responses object, as defined here:
+   *
+   * https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#responsesObject
+   *
+   * **IMPORTANT:** If you populate this, automatic response object generation (based on
+   * inference from your annotations) will be disabled. OAS3 lets you define responses with
+   * whatever you want--it's up to you to make sure they're correct!
+   */
+  readonly responses?: ResponsesObject;
+}
 
 export interface IMappedControllerInfo {
   readonly basePath: string;
@@ -29,7 +67,42 @@ export interface IMappedController extends IMappedControllerBasic {
   readonly endpoints: { [name: string]: IMappedEndpointDetailed };
 }
 
-export interface IMethodOptions {
+export type MethodReturnByCode = {
+  [code: number]: Schema,
+  default?: Schema,
+};
+
+/**
+ * The return type of this endpoint. It can be omitted if you want Stockade to attempt
+ * to discover it from the return type of the method, which only works for built-in
+ * types (such as `number`) or classes that use `@stockade/schemas` annotations.
+ */
+export type MethodReturn =
+  | false
+  | Schema
+  | MethodReturnByCode;
+
+export function isMethodReturnByCode(o: any): o is MethodReturnByCode {
+  const keys = Object.keys(o);
+
+  return keys.length > 0 && keys.every(k => {
+    if (k === 'default') {
+      return true;
+    }
+
+    const code = numeral(k).value();
+
+    if (!code || isNaN(code)) {
+      return false;
+    }
+
+    // tslint:disable-next-line: no-magic-numbers
+    return (100 <= code && code <= 599);
+  });
+}
+
+
+export interface IMethodOptions extends IOAS3EndpointInfo {
   /**
    * The parseable type (either a decorated class or JSON Schema) that shall be
    * returned. The schema returned can be checked for correctness before being returned
@@ -39,8 +112,15 @@ export interface IMethodOptions {
    * - debug mode is off
    * - `manualReturn` is true
    * - `returnHeaders['content-type']` is set to any value other than `application/json`
+   *
+   * Whether or not debug mode is on or not, a warning will be registered if this is
+   * unspecified and Stockade cannot infer the correct value from the method's return
+   * type.
+   *
+   * You can provide either a single Schema, which will default to the specified
+   * `returnCode`, or an object of code->Schema pairs, which map to all response types.
    */
-  readonly returnSchema?: any;
+  readonly returns?: MethodReturn;
 
   /**
    * Headers that should be attached to the response from this method. Please note that
@@ -52,7 +132,8 @@ export interface IMethodOptions {
   readonly returnHeaders?: { [headerName: string]: string | ReadonlyArray<string> };
 
   /**
-   * When returning cleanly, this return code shall be used.
+   * When returning cleanly, this return code shall be used. If not provided, will
+   * default to `200` for everything except POST, which will be `201`.
    *
    * Ignored if `manualReturn` is true.
    */
@@ -138,6 +219,8 @@ export interface IMappedEndpointDetailed extends IMappedEndpointBasic {
   readonly parameters: ReadonlyMap<number, IMappedEndpointParameter>;
 
   readonly requestBody?: IMappedEndpointRequestBody;
+  readonly returnCode: number;
+  readonly responses: MethodReturnByCode;
 }
 
 export interface IParameterResolver<T = any> {
@@ -167,9 +250,3 @@ export function isMappedEndpointBasic(o: any): o is IMappedEndpointBasic {
   return typeof(o[AnnotationKeys.ROUTE_METHOD]) === 'string' && typeof(o[AnnotationKeys.ROUTE_PATH]) === 'string';
 }
 
-export function buildMappedControllerInfo(
-  controllers: ReadonlyArray<[ControllerClass, Domain<IModule>]>,
-): Array<IMappedController> {
-  return controllers
-    .map(([c, d]) => extractMappedControllerMetadata(c, d));
-}

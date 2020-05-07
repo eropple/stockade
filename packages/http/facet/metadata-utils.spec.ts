@@ -4,8 +4,8 @@ import { Domain } from '@stockade/inject';
 
 import { Controller, Delete, Get, Patch, Post, Put } from '../annotations';
 import { AnnotationKeys } from '../annotations/keys';
-import { Http } from '../builder';
-import { buildMappedControllerInfo } from './controller-info';
+import { Http } from '../http-builder';
+import { buildMappedControllerInfo } from './metadata-utils';
 
 class ReturnDTO {
   readonly a!: number;
@@ -30,7 +30,7 @@ class TestController1 {
     return { a: 1, b: 'foo' };
   }
 
-  @Delete('/delete', { returnSchema: ReturnDTO })
+  @Delete('/delete', { returns: ReturnDTO })
   async testDelete(): Promise<ReturnDTO> {
     return { a: 2, b: 'bar' };
   }

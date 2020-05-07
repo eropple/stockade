@@ -2,6 +2,7 @@ import { FastifyRequest } from 'fastify';
 
 import { Schema } from '@stockade/schemas';
 
+import { REQUEST } from '../inject-keys';
 import {
   EndpointHeaderName,
   IMappedEndpointHeaderParameter,
@@ -9,8 +10,7 @@ import {
   IMappedEndpointQueryParameter,
   IMappedEndpointRequestBody,
   isMappedEndpointRequestBody,
-} from '../facet/controller-info';
-import { REQUEST } from '../inject-keys';
+} from '../types/controller-info';
 import { ParameterResolver } from './parameter-resolver.decorator';
 
 export { FastifyRequest } from 'fastify';

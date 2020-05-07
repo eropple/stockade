@@ -7,7 +7,7 @@ import {
   IParameterResolver,
   isMappedEndpointRequestBody,
   MappedEndpointParameter,
-} from '../facet/controller-info';
+} from '../types/controller-info';
 import { AnnotationKeys } from './keys';
 import { RequestBodyArgs } from './request-accessors.decorator';
 

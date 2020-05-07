@@ -1,12 +1,10 @@
 import { FastifyError, FastifyReply } from 'fastify';
-
-import { Runner, App } from '@stockade/core';
-import { Inject } from '@stockade/inject';
-
 import * as http from 'http';
 
+import { App, Runner } from '@stockade/core';
+import { Inject } from '@stockade/inject';
+
 import { Controller, FastifyRequest, Get, Post } from '../annotations';
-import { HttpApp } from '../builder';
 import { httpFacet } from '../facet';
 import {
   IOnErrorHook,
@@ -18,8 +16,11 @@ import {
   IPreSerializationHook,
   IPreValidationHook,
 } from '../hooks';
+import { HttpApp } from '../http-builder';
+import { HttpStatus } from '../http-statuses';
 import { HttpTester } from '../HttpTester';
 import { REQUEST } from '../inject-keys';
+import { Prop, Model } from '@stockade/schemas';
 
 describe('hooks tests', () => {
   let tester!: HttpTester;
@@ -45,14 +46,20 @@ describe('hooks tests', () => {
     tester = new HttpTester(runner);
   });
 
+  @Model()
+  class HooksTestSuccessfulDTO {
+    @Prop()
+    bar!: number;
+  }
+
   @Controller()
   class HooksTestController {
     @Post('successful')
-    successful() {
+    successful(): HooksTestSuccessfulDTO {
       return { bar: 20 };
     }
 
-    @Post('failure')
+    @Post('failure', { returns: false })
     failure() {
       throw new Error('unhandled exception in the frobozz cluster');
     }
@@ -136,7 +143,7 @@ describe('hooks tests', () => {
   it('should run all hooks in order on a failed HTTP request', async () => {
     const resp = await tester.inject({ method: 'POST', url: '/failure' });
 
-    expect(resp.statusCode).toBe(500);
+    expect(resp.statusCode).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
     expect(hooksHit).toEqual([
       'onRequest',
       'preParsing',
