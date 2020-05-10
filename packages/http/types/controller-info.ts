@@ -1,6 +1,6 @@
 import { HTTPMethod } from 'fastify';
 import numeral from 'numeral';
-import { CallbacksObject, ExternalDocumentationObject, ResponsesObject } from 'openapi3-ts';
+import { CallbacksObject, ExternalDocumentationObject, RequestBodyObject, ResponsesObject } from 'openapi3-ts';
 import { Class } from 'utility-types';
 
 import { IModule } from '@stockade/core';
@@ -48,6 +48,12 @@ export interface IOAS3EndpointInfo extends IOAS3ControllerOrEndpointInfo {
    * whatever you want--it's up to you to make sure they're correct!
    */
   readonly responses?: ResponsesObject;
+
+  /**
+   * OAS3 request body object. Overrides the automatic syntax hinting derived from
+   * `@RequestBody()` parameters, if it exists.
+   */
+  readonly requestBody?: RequestBodyObject;
 }
 
 export interface IMappedControllerInfo extends IOAS3ControllerOrEndpointInfo {

@@ -1,10 +1,12 @@
 import * as _ from 'lodash';
-import { InfoObject, OpenAPIObject, OperationObject, PathItemObject } from 'openapi3-ts';
+import { InfoObject, OpenAPIObject, OperationObject, PathItemObject, ReferenceObject, RequestBodyObject, SchemaObject } from 'openapi3-ts';
 
 import { IMappedController, IMappedEndpointDetailed } from '@stockade/http';
 import { SchematizedDocumentInstance, Schematizer } from '@stockade/schemas';
+import { StockadeError } from '@stockade/utils/error';
 import { Logger } from '@stockade/utils/logging';
 
+import { getAllParametersForEndpoint } from '../../facet/utils';
 import { OpenAPIConfig } from '../config';
 import { OAS3Controller } from '../oas3.controller';
 
@@ -85,17 +87,6 @@ export class OASBuilder {
       endpointName: endpointInfo.handlerName,
     });
     logger.debug('processing endpoint.');
-    // - create an operation skeleton, with default name if none exists
-    // - carry up controller-level fields to the endpoint
-    // - for all operation field mutators, run them if the field exists (passing the operation object to mutate)
-    // - walk over all parameters
-    // - match up their friendlynames with either a built-in parameter handler or a user-defined one
-    // - use the schematizerInstance to turn design types into referenced/inferred types on what comes out of the handler
-    // - execute that handler to mutate the operation
-
-    // if (controllerInfo.controller.name === 'AController' || controllerInfo.controller.name === 'BController') {
-    //   console.log(controllerInfo, endpointInfo)
-    // }
 
     const routeOptions = endpointInfo['@stockade/http:ROUTE_OPTIONS'];
     const tags = [
@@ -105,6 +96,39 @@ export class OASBuilder {
 
     if (tags.length === 0) {
       tags.push('default');
+    }
+
+    const responses =
+      routeOptions.responses ??
+      Object.fromEntries(
+        Object.entries(endpointInfo.responses)
+          .map(entry => [entry[0], this.schematizerInstance.inferOrReference(entry[1])],
+        ),
+      );
+
+    let requestBody: RequestBodyObject | undefined;
+    const overridingRequestBody = endpointInfo['@stockade/http:ROUTE_OPTIONS'].requestBody;
+    if (overridingRequestBody) {
+      logger.debug('Explicitly declared request body; assigning.');
+      requestBody = overridingRequestBody
+    } else if (endpointInfo.requestBody) {
+      logger.debug('Parameterized request body; parsing with schematizer.');
+      const contentType = endpointInfo.requestBody.contentType ?? 'application/json';
+
+      requestBody = {
+        content: {
+          [contentType]: {
+            schema:
+              // TODO:  improve openapi3-ts to understand @types/json-schema?
+              //        https://github.com/metadevpro/openapi3-ts/issues/61
+              this.schematizerInstance.inferOrReference(
+                endpointInfo.requestBody?.schema,
+              ) as SchemaObject | ReferenceObject,
+          },
+        },
+      };
+    } else {
+      logger.trace('No request body.');
     }
 
     const ret: OperationObject = {
@@ -119,13 +143,38 @@ export class OASBuilder {
       callbacks: routeOptions.callbacks,
       tags,
 
+      requestBody,
 
-      responses: {},
+      responses,
     };
+
+    logger.trace({ operationState: ret }, 'operation state after initial copy from route options');
+
+    const allParameters = getAllParametersForEndpoint(endpointInfo);
+    for (const parameter of allParameters) {
+      if (!parameter) { continue; }
+
+      switch (parameter.in) {
+        case 'header':
+          break;
+        case 'path':
+          break;
+        case 'query':
+          break;
+        default:
+          throw new StockadeError(
+            `endpoint '${endpointInfo.handlerName}' in '${endpointInfo.controller.name}': ` +
+            `Unrecognized parameter.in '${(parameter as any).in ?? 'undefined'}'.`,
+          );
+      }
+    }
+    logger.trace({ operationState: ret }, 'operation state after parameter extraction');
 
     const fn = this.config.modifyEndpointFn;
     if (fn) {
+      logger.debug('Invoking modifyEndpointFn.');
       await fn(ret, controllerInfo, endpointInfo);
+      logger.trace({ operationState: ret }, 'operation state after modifyEndpointFn');
     }
 
     return ret;

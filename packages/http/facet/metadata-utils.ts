@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 
-import { IModule } from '@stockade/core';
+import { IModule, LOGGER } from '@stockade/core';
 import { Domain } from '@stockade/inject';
 import { Schematizer } from '@stockade/schemas';
 import { StockadeError } from '@stockade/utils/error';
@@ -13,7 +13,7 @@ import {
 
 import { AnnotationKeys } from '../annotations/keys';
 import { HttpStatus } from '../http-statuses';
-import { ControllerClass } from '../types';
+import { ControllerClass, IMappedEndpointRequestBody } from '../types';
 import {
   IMappedController,
   IMappedControllerBasic,
@@ -105,7 +105,21 @@ function extractMappedEndpointMetadata(
     for (const [idx, baseParameter] of baseParameters.entries()) {
       const resolver = baseParameter[AnnotationKeys.PARAMETER_RESOLVER] as (IParameterResolver | undefined);
       let implicitParameterInfo: MappedEndpointParameter | undefined = resolver?.implicitParameter;
-      const requestBody = resolver?.requestBody;
+
+      let requestBody: IMappedEndpointRequestBody | undefined;
+      if (resolver?.requestBody) {
+        requestBody = resolver.requestBody;
+      } else if (resolver?.friendlyName === 'RequestBody') {
+        const designType = baseParameter[PARAMETER_DESIGN_TYPE];
+        if (!designType) {
+          throw new StockadeError(
+            `Controller '${controller.name}', endpoint '${handlerName}', parameter ${idx}: ` +
+            `cannot derive type of RequestBody; please specify explicitly in annotation.`,
+          );
+        }
+
+        requestBody = { schema: designType };
+      }
 
       if (implicitParameterInfo) {
         const designType = baseParameter[PARAMETER_DESIGN_TYPE];

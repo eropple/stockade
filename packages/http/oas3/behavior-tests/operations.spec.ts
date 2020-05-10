@@ -1,36 +1,58 @@
 import { OpenAPIObject } from 'openapi3-ts';
+import { inspect } from 'util';
 
 import { App, Runner } from '@stockade/core';
 import { Controller, HttpApp, httpFacet, HttpTester } from '@stockade/http';
 import { bind, SINGLETON } from '@stockade/inject';
+import { Model, Prop } from '@stockade/schemas';
 
-import { Get } from '../../annotations';
+import { Get, Post, RequestBody } from '../../annotations';
 import { OAS3_CONFIG, OpenAPIConfig } from '../config';
 import { OAS3Module } from '../oas3.module';
+
+@Model()
+class RBody {
+  @Prop()
+  foo!: number;
+}
+
+@Model()
+class ResponseWithFields {
+  @Prop()
+  foo!: string;
+
+  @Prop()
+  bar!: Date;
+}
 
 @Controller()
 class AController {
   @Get()
-  myGet(): number {
+  aGet(): number {
     return 5;
   }
 
   @Get('with-route')
-  myGetWithRoute(): number {
-    return 50;
+  aRouteGet(): string {
+    return 'yo';
+  }
+
+  @Post('request-body')
+  aRequestBody(@RequestBody() body: RBody): number {
+    return body.foo;
   }
 }
 
 @Controller({ basePath: 'b' })
 class BController {
   @Get()
-  myGet(): number {
-    return 10;
+  bGet(): Date {
+    return new Date();
   }
 
-  @Get('with-route')
-  myGetWithRoute(): number {
-    return 100;
+  @Get('complex-object')
+  bComplexObjectGet(): ResponseWithFields {
+    return { foo: 'hello', bar: new Date() };
   }
 }
 
@@ -69,6 +91,56 @@ describe('oas3 controller behavior tests', () => {
   });
 
   it('should describe in OAS3 a basic GET', async () => {
-    console.log(JSON.stringify(doc, null, 2));
+      expect(doc).toMatchObject({
+        paths: {
+          '/': {
+            get: {
+              operationId: 'aGet',
+              tags: ['default'],
+              responses: {
+                200: { type: 'number' },
+              },
+            },
+          },
+          '/with-route': {
+            get: {
+              operationId: 'aRouteGet',
+              tags: ['default'],
+              responses: {
+                200: { type: 'string' },
+              },
+            },
+          },
+          '/b': {
+            get: {
+              operationId: 'bGet',
+              tags: ['default'],
+              responses: {
+                200: { type: 'string', format: 'date' },
+              },
+            },
+          },
+          '/b/complex-object': {
+            get: {
+              operationId: 'bComplexObjectGet',
+              tags: ['default'],
+              responses: {
+                200: { $ref: `#/components/schemas/${ResponseWithFields.name}` },
+              },
+            },
+          },
+        },
+      });
+  });
+
+  it('should represent a request body', async () => {
+    const aRequestBody = doc.paths['/request-body'].post;
+
+    expect(aRequestBody).toMatchObject({
+      operationId: 'aRequestBody',
+      responses: {
+        201: { type: 'number' },
+      },
+    });
   });
 })
