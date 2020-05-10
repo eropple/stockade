@@ -405,6 +405,7 @@ export class HttpFacet extends FacetBase {
             endpointInfo,
             allParameters,
             jsonSchemaDocument,
+            !!this._options.disableResponseValidation,
           );
           eLogger.debug({ method, url, routeSchema }, `Defining route ${method} ${url}.`);
           fastify.route({

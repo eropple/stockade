@@ -103,6 +103,7 @@ export function makeEndpointSchemaForFastify(
   endpointInfo: IMappedEndpointDetailed,
   allParameters: ReadonlyArray<MappedEndpointParameter>,
   document: SchematizedDocumentInstance,
+  disableResponseValidation: boolean,
 ): RouteSchema {
   try {
     let response: {
@@ -110,11 +111,15 @@ export function makeEndpointSchemaForFastify(
       [code: string]: FastifyJSONSchema
     } | undefined;
     try {
-      response = Object.fromEntries(
-        Object.entries(endpointInfo.responses)
-          // .filter(entry => !!entry[1])
-          .map(entry => [entry[0], document.inferOrReference(entry[1])])
-        );
+      response =
+        disableResponseValidation
+          ? undefined
+          : Object.fromEntries(
+              Object.entries(endpointInfo.responses)
+                // .filter(entry => !!entry[1])
+                .map(entry => [entry[0], document.inferOrReference(entry[1])],
+              ),
+            );
     } catch (err) {
       logger.error(
         { err },

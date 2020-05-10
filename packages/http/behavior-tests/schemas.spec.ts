@@ -61,8 +61,18 @@ class SchemasTestController {
   @Post('rbody-test')
   requestBodyTest(
     @RequestBody(RBody) body: RBody,
-  ) {
+  ): RBody {
     return body;
+  }
+
+  @Get('bad-response-body')
+  badResponseBodyTest(): RBody {
+    return { foo: 'this is not a number', baz: null } as any;
+  }
+
+  @Get('bad-response-body/async', { returns: RBody })
+  badResponseBodyAsyncTest(): Promise<RBody> {
+    return { foo: 'this is not a number', baz: null } as any;
   }
 
   @Post('request-body-test-alt', { returns: false })
@@ -100,6 +110,18 @@ describe('schemas and in/out parameters', () => {
     const res = await tester.inject({ method: 'GET', url: '/no-args' });
     expect(res.statusCode).toBe(HttpStatus.OK);
     expect(res.json()).toMatchObject({ hello: 'world' });
+  });
+
+  it('should 500 if a response body is incorrect', async () => {
+    const res = await tester.inject({ method: 'GET', url: '/bad-response-body' });
+    expect(res.statusCode).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(res.json().message).toMatch(/^foo is/);
+  });
+
+  it('should 500 if a response body is incorrect in an async function (explicit returns)', async () => {
+    const res = await tester.inject({ method: 'GET', url: '/bad-response-body/async' });
+    expect(res.statusCode).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(res.json().message).toMatch(/^foo is/);
   });
 
   it('should coerce correct path arguments', async () => {

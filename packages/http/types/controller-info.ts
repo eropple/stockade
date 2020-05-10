@@ -50,7 +50,7 @@ export interface IOAS3EndpointInfo extends IOAS3ControllerOrEndpointInfo {
   readonly responses?: ResponsesObject;
 }
 
-export interface IMappedControllerInfo {
+export interface IMappedControllerInfo extends IOAS3ControllerOrEndpointInfo {
   readonly basePath: string;
 }
 
