@@ -8,6 +8,7 @@ import { Logger } from '@stockade/utils/logging';
 
 import { OAS3_CONFIG, OpenAPIConfig } from './config';
 import { OASBuilder } from './oas-builder';
+import { validateDocument } from './validation';
 
 export const OAS3_DOCUMENT = Symbol.for('@stockade/oas3:OAS3_DOCUMENT');
 export const oas3DocumentProvider: IFactoryProviderDefinition<OpenAPIObject> = {
@@ -26,6 +27,27 @@ export const oas3DocumentProvider: IFactoryProviderDefinition<OpenAPIObject> = {
 
     if (config.modifyDocFn) {
       await config.modifyDocFn(doc);
+    }
+
+    const docValidation = config.docValidation ?? 'perform';
+    if (docValidation !== 'skip') {
+      const { errors, warnings } = await validateDocument(doc);
+
+      if (!errors && !warnings) {
+        logger.info('OAS3 validation performed: no errors!');
+      } else {
+        if (warnings) {
+          logger.warn({ warn: warnings.toString() }, 'Warning when validating OpenAPI document.');
+        }
+
+        if (errors) {
+          logger.error({ err: errors.toString() }, 'Error when validating OpenAPI document.');
+
+          if (docValidation === 'perform') {
+            throw errors;
+          }
+        }
+      }
     }
 
     // TODO: validate document and log any errors; optionally kill server on start if not correct

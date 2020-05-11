@@ -37,4 +37,15 @@ export type OpenAPIConfig = {
    * The default, required values for the OAS3 document (title, version, etc.).
    */
   info: InfoObject;
+
+  /**
+   * Determines whether, after creation, the OAS3 document is inspected by our
+   * validation tools.
+   *
+   * -  `perform` (default) will throw an error during creation if the document is
+   *    somehow incorrect. Good for development and staging environments.
+   * -  `log` will not throw an error for OAS3 validation errors, but will log them.
+   * -  `skip` omits OAS3 validation. Not recommended.
+   */
+  docValidation?: 'skip' | 'log' | 'perform';
 };
