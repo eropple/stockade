@@ -182,7 +182,7 @@ describe('schemas and in/out parameters', () => {
     });
 
     expect(res.json()).toMatchObject({ foo: 37, baz: 'orange' });
-    expect(res.statusCode).toBe(HttpStatus.CREATED);
+    expect(res.statusCode).toBe(HttpStatus.OK);
   });
 
   it('should reject bad simple request bodies', async () => {
@@ -204,6 +204,6 @@ describe('schemas and in/out parameters', () => {
     });
 
     expect(res.json()).toMatchObject({ value: 'world' });
-    expect(res.statusCode).toBe(HttpStatus.CREATED);
+    expect(res.statusCode).toBe(HttpStatus.OK);
   });
 });

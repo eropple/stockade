@@ -35,7 +35,7 @@ describe('oas3 trivial behavior tests', () => {
 
     const resp = await tester.inject({ url: '/openapi.json' })
     expect(resp.json()).toMatchObject({
-      openapi: '3.1',
+      openapi: '3.1.0',
       info: { title: 'hello', version: '0.1.0' },
       paths: {}
     });
@@ -69,7 +69,7 @@ describe('oas3 trivial behavior tests', () => {
     // implicitly tests to make sure a leading `/` is safe.
     const resp = await tester.inject({ url: '/qwop.json' })
     expect(resp.json()).toMatchObject({
-      openapi: '3.1',
+      openapi: '3.1.0',
       info: { title: 'hello', version: '0.1.0' },
       paths: {}
     });
@@ -132,7 +132,7 @@ describe('oas3 trivial behavior tests', () => {
 
     const resp = await tester.inject({ url: '/openapi.json' })
     expect(resp.json()).toMatchObject({
-      openapi: '3.1',
+      openapi: '3.1.0',
       info: { title: 'hello', version: '0.1.0' },
       paths: {},
       'x-test': true,
@@ -179,7 +179,7 @@ describe('oas3 trivial behavior tests', () => {
 
     const resp = await tester.inject({ url: '/openapi.json' })
     expect(resp.json()).toMatchObject({
-      openapi: '3.1',
+      openapi: '3.1.0',
       info: { title: 'hello', version: '0.1.0' },
       paths: {
         '/': {

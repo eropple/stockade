@@ -6,7 +6,7 @@ import { Controller, HttpApp, httpFacet, HttpTester } from '@stockade/http';
 import { bind, SINGLETON } from '@stockade/inject';
 import { Model, Prop } from '@stockade/schemas';
 
-import { Get, Post, RequestBody } from '../../annotations';
+import { Get, Post, Query, RequestBody } from '../../annotations';
 import { OAS3_CONFIG, OpenAPIConfig } from '../config';
 import { OAS3Module } from '../oas3.module';
 
@@ -56,6 +56,17 @@ class BController {
   }
 }
 
+@Controller({ basePath: 'p' })
+class ParameterizedController {
+  @Get('query-params')
+  query(
+    @Query('req') reqParam: number,
+    @Query('opt', { required: false }) optParam: string,
+  ): string {
+    return `${reqParam}-${optParam || 'NONE'}`;
+  }
+}
+
 describe('oas3 controller behavior tests', () => {
   let runner: Runner;
   let tester: HttpTester;
@@ -77,7 +88,7 @@ describe('oas3 controller behavior tests', () => {
           .children(OAS3Module)
           .apply(
             HttpApp()
-              .controllers(AController, BController),
+              .controllers(AController, BController, ParameterizedController),
             ),
       facets: [
         httpFacet({ fastify: { listen: { port: 0 } } }),
@@ -98,7 +109,13 @@ describe('oas3 controller behavior tests', () => {
               operationId: 'aGet',
               tags: ['default'],
               responses: {
-                200: { type: 'number' },
+                200: {
+                  content: {
+                    'application/json': {
+                      schema: { type: 'number' }
+                    },
+                  },
+                },
               },
             },
           },
@@ -107,7 +124,13 @@ describe('oas3 controller behavior tests', () => {
               operationId: 'aRouteGet',
               tags: ['default'],
               responses: {
-                200: { type: 'string' },
+                200: {
+                  content: {
+                    'application/json': {
+                      schema: { type: 'string' }
+                    },
+                  },
+                },
               },
             },
           },
@@ -116,7 +139,13 @@ describe('oas3 controller behavior tests', () => {
               operationId: 'bGet',
               tags: ['default'],
               responses: {
-                200: { type: 'string', format: 'date' },
+                200: {
+                  content: {
+                    'application/json': {
+                      schema: { type: 'string', format: 'date' }
+                    },
+                  },
+              },
               },
             },
           },
@@ -125,12 +154,18 @@ describe('oas3 controller behavior tests', () => {
               operationId: 'bComplexObjectGet',
               tags: ['default'],
               responses: {
-                200: { $ref: `#/components/schemas/${ResponseWithFields.name}` },
+                200: {
+                  content: {
+                    'application/json': {
+                      schema: { $ref: `#/components/schemas/${ResponseWithFields.name}` },
+                    },
+                  },
+                },
               },
             },
           },
         },
-      });
+    });
   });
 
   it('should represent a request body', async () => {
@@ -139,8 +174,17 @@ describe('oas3 controller behavior tests', () => {
     expect(aRequestBody).toMatchObject({
       operationId: 'aRequestBody',
       responses: {
-        201: { type: 'number' },
+        200: {
+          content: {
+            'application/json': { schema: { type: 'number' } },
+          },
+        },
       },
     });
   });
+
+  it('should represent query parameters and optional query parameters alike', async () => {
+    const queries = doc.paths['/p/query-params'].get;
+    console.log(queries);
+  })
 })

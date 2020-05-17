@@ -13,7 +13,7 @@ import {
 
 import { AnnotationKeys } from '../annotations/keys';
 import { HttpStatus } from '../http-statuses';
-import { ControllerClass, IMappedEndpointRequestBody } from '../types';
+import { ControllerClass, IMappedEndpointBasic, IMappedEndpointRequestBody } from '../types';
 import {
   IMappedController,
   IMappedControllerBasic,
@@ -60,14 +60,12 @@ function extractMappedEndpointMetadata(
     if (!isMappedEndpointBasic(endpointBasicInfo)) { continue; }
 
 
+    const routeOptions = endpointBasicInfo['@stockade/http:ROUTE_OPTIONS'] || {};
     const parameters: Map<number, IMappedEndpointParameter> = new Map();
 
     const returnCode: number =
       endpointBasicInfo['@stockade/http:ROUTE_OPTIONS'].returnCode
-        ?? endpointBasicInfo['@stockade/http:ROUTE_METHOD'] === 'POST'
-            // tslint:disable-next-line: no-magic-numbers
-            ? HttpStatus.CREATED
-            : HttpStatus.OK;
+        ?? HttpStatus.OK;
 
     const endpointInfoReturns = endpointBasicInfo['@stockade/http:ROUTE_OPTIONS'].returns;
     const designReturnType = endpointBasicInfo['design:returntype'];
@@ -90,13 +88,12 @@ function extractMappedEndpointMetadata(
       handlerName,
       parameters, // this will be mutable in-function and that is a minor sin, but it's OK
 
+      description: routeOptions.description ?? autoDocumentEndpoint(handlerName, endpointBasicInfo),
+
       returnCode,
       responses,
       requestBody: undefined, // this is also mutable in-function; sucks, but we deal.
-      '@stockade/http:ROUTE_OPTIONS': {
-        ...(endpointBasicInfo['@stockade/http:ROUTE_OPTIONS'] || {}),
-
-      }
+      '@stockade/http:ROUTE_OPTIONS': routeOptions,
     };
 
     const baseParameters = getPropertyParameterMetadataForClass(controller, handlerName);
@@ -173,4 +170,8 @@ export function buildMappedControllerInfo(
 ): Array<IMappedController> {
   return controllers
     .map(([c, d]) => extractMappedControllerMetadata(c, d));
+}
+
+function autoDocumentEndpoint(handlerName: string, endpointBasicInfo: IMappedEndpointBasic): string {
+  return `The ${handlerName} endpoint.`;
 }

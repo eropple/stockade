@@ -1,13 +1,26 @@
 import * as _ from 'lodash';
-import { InfoObject, OpenAPIObject, OperationObject, PathItemObject, ReferenceObject, RequestBodyObject, SchemaObject } from 'openapi3-ts';
+import { flatten } from 'lodash';
+import {
+  InfoObject,
+  OpenAPIObject,
+  OperationObject,
+  ParameterObject,
+  PathItemObject,
+  ReferenceObject,
+  RequestBodyObject,
+  ResponseObject,
+  ResponsesObject,
+  SchemaObject,
+} from 'openapi3-ts';
 
 import { IMappedController, IMappedEndpointDetailed } from '@stockade/http';
 import { SchematizedDocumentInstance, Schematizer } from '@stockade/schemas';
-import { StockadeError } from '@stockade/utils/error';
 import { Logger } from '@stockade/utils/logging';
+import { getPropertyCaseInsensitively } from '@stockade/utils/objects';
 
 import { getAllParametersForEndpoint } from '../../facet/utils';
 import { OpenAPIConfig } from '../config';
+import { OAS3Error } from '../error';
 import { OAS3Controller } from '../oas3.controller';
 
 // classes, poor man's closures, etc.
@@ -31,7 +44,7 @@ export class OASBuilder {
   ): Promise<OpenAPIObject> {
     const logger = this.logger.child({ oas3BuilderPhase: 'build' });
     const doc: OpenAPIObject = {
-      openapi: '3.1',
+      openapi: '3.1.0',
       info,
       paths: {},
       components: {
@@ -98,11 +111,26 @@ export class OASBuilder {
       tags.push('default');
     }
 
-    const responses =
+    const repsonseReturnType = flatten([getPropertyCaseInsensitively(
+      'content-type',
+      endpointInfo['@stockade/http:ROUTE_OPTIONS'].returnHeaders || {},
+    )])[0] ?? 'application/json';
+
+    const responses: ResponsesObject =
       routeOptions.responses ??
       Object.fromEntries(
         Object.entries(endpointInfo.responses)
-          .map(entry => [entry[0], this.schematizerInstance.inferOrReference(entry[1])],
+          .map(entry => [
+            entry[0],
+            {
+              description: '',
+              content: {
+                [repsonseReturnType]: {
+                  schema: this.schematizerInstance.inferOrReference(entry[1]),
+                },
+              }
+            } as ResponseObject,
+          ],
         ),
       );
 
@@ -143,6 +171,8 @@ export class OASBuilder {
       callbacks: routeOptions.callbacks,
       tags,
 
+      parameters: [],
+
       requestBody,
 
       responses,
@@ -153,7 +183,15 @@ export class OASBuilder {
     const allParameters = getAllParametersForEndpoint(endpointInfo);
     for (const parameter of allParameters) {
       if (!parameter) { continue; }
+      const oasParam: ParameterObject = {
+        ...parameter,
+        // TODO:  improve openapi3-ts to understand @types/json-schema?
+        schema: this.schematizerInstance.inferOrReference(parameter.schema) as SchemaObject,
+      }
 
+      // TODO: eventually this should support `explode` and `allowEmptyValue`
+      // this is intentionally left blank aside from the default;
+      // modify it later as needed for the logic required.
       switch (parameter.in) {
         case 'header':
           break;
@@ -162,11 +200,13 @@ export class OASBuilder {
         case 'query':
           break;
         default:
-          throw new StockadeError(
+          throw new OAS3Error(
             `endpoint '${endpointInfo.handlerName}' in '${endpointInfo.controller.name}': ` +
             `Unrecognized parameter.in '${(parameter as any).in ?? 'undefined'}'.`,
           );
       }
+
+      ret.parameters!.push(oasParam);
     }
     logger.trace({ operationState: ret }, 'operation state after parameter extraction');
 

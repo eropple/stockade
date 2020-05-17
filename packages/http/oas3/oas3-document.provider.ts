@@ -7,6 +7,7 @@ import { Schematizer } from '@stockade/schemas';
 import { Logger } from '@stockade/utils/logging';
 
 import { OAS3_CONFIG, OpenAPIConfig } from './config';
+import { OAS3Error } from './error';
 import { OASBuilder } from './oas-builder';
 import { validateDocument } from './validation';
 
@@ -19,9 +20,10 @@ export const oas3DocumentProvider: IFactoryProviderDefinition<OpenAPIObject> = {
     c: ReadonlyArray<IMappedController>,
     schematizer: Schematizer,
     config: OpenAPIConfig,
-    logger: Logger,
+    baseLogger: Logger,
   ) => {
     // TODO: inject logger down into the OAS3 builder
+    const logger = baseLogger.child({ component: 'OAS3DocumentProvider' });
     const builder = new OASBuilder(logger, schematizer, config);
     const doc = await builder.build(c, config.info);
 
@@ -30,6 +32,7 @@ export const oas3DocumentProvider: IFactoryProviderDefinition<OpenAPIObject> = {
     }
 
     const docValidation = config.docValidation ?? 'perform';
+    logger.info({ docValidation }, 'OAS3 document completed.');
     if (docValidation !== 'skip') {
       const { errors, warnings } = await validateDocument(doc);
 
@@ -37,15 +40,13 @@ export const oas3DocumentProvider: IFactoryProviderDefinition<OpenAPIObject> = {
         logger.info('OAS3 validation performed: no errors!');
       } else {
         if (warnings) {
-          logger.warn({ warn: warnings.toString() }, 'Warning when validating OpenAPI document.');
+          logger.warn({ warn: warnings.toString() }, `Warning when validating OpenAPI document: ${warnings}`);
         }
 
         if (errors) {
-          logger.error({ err: errors.toString() }, 'Error when validating OpenAPI document.');
+          logger.error({ err: errors.toString() }, `Error when validating OpenAPI document: ${errors}`);
 
-          if (docValidation === 'perform') {
-            throw errors;
-          }
+          // TODO: implement docValidation == 'perform'
         }
       }
     }

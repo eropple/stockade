@@ -9,7 +9,10 @@ export interface IOAS3ValidationResults {
 }
 
 export async function validateDocument(doc: OpenAPIObject): Promise<IOAS3ValidationResults> {
-  const { errors, warnings } = await Enforcer(doc, { fullResult: true });
+  // openapi-enforcer is a bit overly zealous with regards to the document
+  //
+  const d = JSON.parse(JSON.stringify(doc));
+  const result = await Enforcer(d, { fullResult: true });
 
-  return { errors, warnings };
+  return { errors: result.error, warnings: result.warning };
 }

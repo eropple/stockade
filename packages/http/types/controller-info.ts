@@ -1,6 +1,6 @@
 import { HTTPMethod } from 'fastify';
 import numeral from 'numeral';
-import { CallbacksObject, ExternalDocumentationObject, RequestBodyObject, ResponsesObject } from 'openapi3-ts';
+import { CallbacksObject, ExternalDocumentationObject, ParameterLocation, ParameterObject, RequestBodyObject, ResponsesObject } from 'openapi3-ts';
 import { Class } from 'utility-types';
 
 import { IModule } from '@stockade/core';
@@ -139,7 +139,11 @@ export interface IMethodOptions extends IOAS3EndpointInfo {
 
   /**
    * When returning cleanly, this return code shall be used. If not provided, will
-   * default to `200` for everything except POST, which will be `201`.
+   * default to `200` for everything, _including_ `POST` (unlike some other frameworks).
+   * The reason for POSTs being `200` is because `201` buys you into using the
+   * `Location` header to point clients at where they can access the resource that
+   * that `POST` created and that is a level of HTTP/RFC adherence that basically nobody
+   * actually _does_.
    *
    * Ignored if `manualReturn` is true.
    */
@@ -154,6 +158,15 @@ export interface IMethodOptions extends IOAS3EndpointInfo {
    * the documentation.
    */
   readonly manualReturn?: boolean;
+
+  /**
+   * An (optional) description that shall be used for this endpoint in generated
+   * documentation. Stockade will try to do something vaguely intelligent if you
+   * don't provide one, but that's on you.
+   *
+   * TODO: make Stockade do something vaguely intelligent if you don't provide one
+   */
+  readonly description?: string;
 }
 
 export interface IMethodWithBodyOptions extends IMethodOptions {
@@ -161,13 +174,11 @@ export interface IMethodWithBodyOptions extends IMethodOptions {
 }
 
 // spoilers: these are just OAS3
-export interface IMappedEndpointParameterBase {
-  readonly name: string;
-  readonly in: string;
-  readonly description?: string;
-  readonly required?: boolean;
-  readonly deprecated?: boolean;
-  readonly style?: string;
+export interface IMappedEndpointParameterBase
+  extends Pick<
+    ParameterObject,
+    'name' | 'in' | 'description' | 'required' | 'deprecated' | 'style'
+  > {
   readonly schema?: Schema;
 }
 
@@ -225,6 +236,7 @@ export interface IMappedEndpointDetailed extends IMappedEndpointBasic {
   readonly parameters: ReadonlyMap<number, IMappedEndpointParameter>;
 
   readonly requestBody?: IMappedEndpointRequestBody;
+  readonly description: string;
   readonly returnCode: number;
   readonly responses: MethodReturnByCode;
 }
