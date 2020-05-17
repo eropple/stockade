@@ -6,7 +6,7 @@ import { Controller, HttpApp, httpFacet, HttpTester } from '@stockade/http';
 import { bind, SINGLETON } from '@stockade/inject';
 import { Model, Prop } from '@stockade/schemas';
 
-import { Get, Post, Query, RequestBody } from '../../annotations';
+import { Get, Header, Path, Post, Query, RequestBody } from '../../annotations';
 import { OAS3_CONFIG, OpenAPIConfig } from '../config';
 import { OAS3Module } from '../oas3.module';
 
@@ -25,7 +25,7 @@ class ResponseWithFields {
   bar!: Date;
 }
 
-@Controller()
+@Controller({ tags: ['a'] })
 class AController {
   @Get()
   aGet(): number {
@@ -43,14 +43,14 @@ class AController {
   }
 }
 
-@Controller({ basePath: 'b' })
+@Controller({ basePath: 'b', tags: ['b'] })
 class BController {
   @Get()
   bGet(): Date {
     return new Date();
   }
 
-  @Get('complex-object')
+  @Get('complex-object', { tags: ['weird'] })
   bComplexObjectGet(): ResponseWithFields {
     return { foo: 'hello', bar: new Date() };
   }
@@ -62,6 +62,22 @@ class ParameterizedController {
   query(
     @Query('req') reqParam: number,
     @Query('opt', { required: false }) optParam: string,
+  ): string {
+    return `${reqParam}-${optParam || 'NONE'}`;
+  }
+
+  @Get('path-params/:req')
+  path(
+    @Path('req') reqParam: number,
+  ): string {
+    // tslint:disable-next-line: no-magic-numbers
+    return `${reqParam.toString().padStart(10, '0')}`;
+  }
+
+  @Get('header-params')
+  header(
+    @Header('req') reqParam: number,
+    @Header('opt', { required: false }) optParam: string
   ): string {
     return `${reqParam}-${optParam || 'NONE'}`;
   }
@@ -107,7 +123,7 @@ describe('oas3 controller behavior tests', () => {
           '/': {
             get: {
               operationId: 'aGet',
-              tags: ['default'],
+              tags: ['a'],
               responses: {
                 200: {
                   content: {
@@ -122,7 +138,7 @@ describe('oas3 controller behavior tests', () => {
           '/with-route': {
             get: {
               operationId: 'aRouteGet',
-              tags: ['default'],
+              tags: ['a'],
               responses: {
                 200: {
                   content: {
@@ -137,7 +153,7 @@ describe('oas3 controller behavior tests', () => {
           '/b': {
             get: {
               operationId: 'bGet',
-              tags: ['default'],
+              tags: ['b'],
               responses: {
                 200: {
                   content: {
@@ -152,7 +168,7 @@ describe('oas3 controller behavior tests', () => {
           '/b/complex-object': {
             get: {
               operationId: 'bComplexObjectGet',
-              tags: ['default'],
+              tags: ['b', 'weird'],
               responses: {
                 200: {
                   content: {
@@ -185,6 +201,66 @@ describe('oas3 controller behavior tests', () => {
 
   it('should represent query parameters and optional query parameters alike', async () => {
     const queries = doc.paths['/p/query-params'].get;
-    console.log(queries);
-  })
-})
+
+    expect(queries).toMatchObject({
+      operationId: 'query',
+      tags: ['default'],
+      parameters: [
+        { name: 'req', in: 'query', schema: { type: 'number' } },
+        { name: 'opt', in: 'query', required: false, schema: { type: 'string'} },
+      ],
+      responses: {
+        200: {
+          content: {
+            'application/json': {
+              schema: { type: 'string' },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('should represent header parameters and optional header parameters alike', async () => {
+    const queries = doc.paths['/p/header-params'].get;
+
+    expect(queries).toMatchObject({
+      operationId: 'header',
+      tags: ['default'],
+      parameters: [
+        { name: 'req', in: 'header', schema: { type: 'number' } },
+        { name: 'opt', in: 'header', required: false, schema: { type: 'string'} },
+      ],
+      responses: {
+        200: {
+          content: {
+            'application/json': {
+              schema: { type: 'string' },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('should represent path parameters', async () => {
+    const path = doc.paths['/p/path-params/{req}'].get;
+
+    expect(path).toMatchObject({
+      operationId: 'path',
+      tags: ['default'],
+      parameters: [
+        { name: 'req', in: 'path', schema: { type: 'number' } },
+      ],
+      responses: {
+        200: {
+          content: {
+            'application/json': {
+              schema: { type: 'string' },
+            },
+          },
+        },
+      },
+    });
+  });
+});

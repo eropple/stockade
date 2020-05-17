@@ -1,5 +1,4 @@
 import * as _ from 'lodash';
-import { flatten } from 'lodash';
 import {
   InfoObject,
   OpenAPIObject,
@@ -19,6 +18,7 @@ import { Logger } from '@stockade/utils/logging';
 import { getPropertyCaseInsensitively } from '@stockade/utils/objects';
 
 import { getAllParametersForEndpoint } from '../../facet/utils';
+import { convertPathForOpenAPI } from '../../utils';
 import { OpenAPIConfig } from '../config';
 import { OAS3Error } from '../error';
 import { OAS3Controller } from '../oas3.controller';
@@ -83,8 +83,9 @@ export class OASBuilder {
         operation,
       }, 'operation returned for endpoint.');
 
-      const pathItem: PathItemObject = doc.paths[endpointInfo.fullUrlPath] ?? {};
-      doc.paths[endpointInfo.fullUrlPath] = pathItem;
+      const convertedPath = convertPathForOpenAPI(endpointInfo.fullUrlPath);
+      const pathItem: PathItemObject = doc.paths[convertedPath] ?? {};
+      doc.paths[convertedPath] = pathItem;
 
       pathItem[endpointInfo['@stockade/http:ROUTE_METHOD'].toLowerCase()] = operation;
     }
@@ -111,7 +112,7 @@ export class OASBuilder {
       tags.push('default');
     }
 
-    const repsonseReturnType = flatten([getPropertyCaseInsensitively(
+    const repsonseReturnType = _.flatten([getPropertyCaseInsensitively(
       'content-type',
       endpointInfo['@stockade/http:ROUTE_OPTIONS'].returnHeaders || {},
     )])[0] ?? 'application/json';
@@ -123,6 +124,7 @@ export class OASBuilder {
           .map(entry => [
             entry[0],
             {
+              // TODO: make description extractable from responses
               description: '',
               content: {
                 [repsonseReturnType]: {
