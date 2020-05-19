@@ -13,7 +13,7 @@ import {
 
 import { AnnotationKeys } from '../annotations/keys';
 import { HttpStatus } from '../http-statuses';
-import { ControllerClass, IMappedEndpointBasic, IMappedEndpointRequestBody } from '../types';
+import { ControllerClass, IMappedEndpointBasic, IMappedEndpointRequestBody, ISecurityAssignment } from '../types';
 import {
   IMappedController,
   IMappedControllerBasic,
@@ -44,12 +44,13 @@ export function extractMappedControllerMetadata(
     ...controllerBase,
     controller,
     domain,
-    endpoints: extractMappedEndpointMetadata(controller, controllerInfo),
+    endpoints: extractMappedEndpointMetadata(controller, controllerBase, controllerInfo),
   };
 }
 
 function extractMappedEndpointMetadata(
   controller: ControllerClass,
+  controllerBase: IMappedControllerBasic,
   controllerInfo: IMappedControllerInfo,
 ): { [name: string]: IMappedEndpointDetailed } {
   const ret: { [name: string]: IMappedEndpointDetailed } = {};
@@ -80,6 +81,11 @@ function extractMappedEndpointMetadata(
             ? { [returnCode]: designReturnType }
             : {};
 
+    const securityAssignments: ReadonlyArray<ISecurityAssignment> = [
+      ...(controllerBase['@stockade/http:SECURITY'] ?? []),
+      ...(endpointBasicInfo['@stockade/http:SECURITY'] ?? []),
+    ];
+
 
     let endpointInfo: IMappedEndpointDetailed = {
       ...endpointBasicInfo,
@@ -89,6 +95,11 @@ function extractMappedEndpointMetadata(
       parameters, // this will be mutable in-function and that is a minor sin, but it's OK
 
       description: routeOptions.description ?? autoDocumentEndpoint(handlerName, endpointBasicInfo),
+      explicitParameters: [
+        ...(controllerBase['@stockade/HTTP:EXPLICIT_PARAMETERS'] || []),
+        ...(endpointBasicInfo['@stockade/HTTP:EXPLICIT_PARAMETERS'] || [])
+      ],
+      securityAssignments,
 
       returnCode,
       responses,

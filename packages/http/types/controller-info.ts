@@ -1,17 +1,34 @@
 import { HTTPMethod } from 'fastify';
 import numeral from 'numeral';
-import { CallbacksObject, ExternalDocumentationObject, ParameterLocation, ParameterObject, RequestBodyObject, ResponsesObject } from 'openapi3-ts';
+import {
+  CallbacksObject,
+  ExternalDocumentationObject,
+  ParameterObject,
+  RequestBodyObject,
+  ResponsesObject,
+} from 'openapi3-ts';
 import { Class } from 'utility-types';
 
 import { IModule } from '@stockade/core';
 import { Domain } from '@stockade/inject';
 import { Schema } from '@stockade/schemas';
 import { IParameterMetadata, RETURN_DESIGN_TYPE } from '@stockade/utils/metadata';
+import { StringTo } from '@stockade/utils/types';
 
 import { AnnotationKeys } from '../annotations/keys';
 import { FastifyHookClass } from '../hooks';
+import { ISecurity } from '../security';
 import { ControllerClass } from '../types';
 
+export interface ISecurityAssignment {
+  cls: Class<ISecurity<any>>,
+  args: StringTo<any>,
+}
+
+/**
+ * OAS3-related fields that can be applied to either a controller _or_ to an endpoint.
+ * If applied to a controller, they will be set for all endpoints in that controller.
+ */
 export interface IOAS3ControllerOrEndpointInfo {
   /**
    * Categorization tags for endpoints in your OAS3 doc. Controller-level tags will
@@ -21,6 +38,9 @@ export interface IOAS3ControllerOrEndpointInfo {
   readonly deprecated?: boolean;
 }
 
+/**
+ * Endpoint-specific OAS3 stuff.
+ */
 export interface IOAS3EndpointInfo extends IOAS3ControllerOrEndpointInfo {
   readonly tags?: ReadonlyArray<string>;
 
@@ -56,17 +76,39 @@ export interface IOAS3EndpointInfo extends IOAS3ControllerOrEndpointInfo {
   readonly requestBody?: RequestBodyObject;
 }
 
+/**
+ * Operational (i.e., non-OAS3, though some may be used by OAS3 when needed) fields that
+ * apply to both controllers and endpoints. Any settings in a controller shall apply to
+ * all endpoints inside it, unless overwritten.
+ */
+export interface IControllerOrEndpointBasic {
+  readonly [AnnotationKeys.EXPLICIT_PARAMETERS]?: ReadonlyArray<MappedEndpointParameter>;
+  readonly [AnnotationKeys.SECURITY]?: ReadonlyArray<ISecurityAssignment>;
+}
+
+/**
+ * Information provided by the developer in the `@Controller()` decorator's argument.
+ */
 export interface IMappedControllerInfo extends IOAS3ControllerOrEndpointInfo {
   readonly basePath: string;
 }
 
-export interface IMappedControllerBasic {
+/**
+ * Information applied directly to a controller in the form of decorators. Not to be
+ * confused with `IMappedControllerInfo`, which refers strictly to the contents of
+ * the `@Controller()` annotation.
+ */
+export interface IMappedControllerBasic extends IControllerOrEndpointBasic {
   readonly [AnnotationKeys.CONTROLLER_INFO]: IMappedControllerInfo;
   readonly [AnnotationKeys.HOOKS]?: ReadonlyArray<FastifyHookClass>;
 
   readonly [extraKey: string]: any;
 }
 
+/**
+ * Stockade will take the `IMappedControllerBasic` and add to it necessary fields,
+ * yielding `IMappedController` which is used at runtime.
+ */
 export interface IMappedController extends IMappedControllerBasic {
   readonly controller: ControllerClass;
   readonly domain: Domain<IModule>;
@@ -218,7 +260,11 @@ export function isMappedEndpointRequestBody(o: any): o is IMappedEndpointRequest
   return o && o.content;
 }
 
-export interface IMappedEndpointBasic {
+/**
+ * `IMappedEndpointBasic` encompasses the decorators that are added to an endpoint as
+ * part of normal HTTP stuff.
+ */
+export interface IMappedEndpointBasic extends IControllerOrEndpointBasic {
   readonly [AnnotationKeys.ROUTE_METHOD]: HTTPMethod;
   readonly [AnnotationKeys.ROUTE_PATH]: string;
   readonly [AnnotationKeys.HOOKS]?: ReadonlyArray<FastifyHookClass>;
@@ -229,11 +275,18 @@ export interface IMappedEndpointBasic {
   readonly [extraKey: string]: any;
 }
 
+/**
+ * `IMappedEndpointDetailed` contains all of the metadata from `IMappedEndpointBasic`,
+ * but folds in information from the controller and default values to provide
+ * actionable information for Stockade to use at runtime.
+ */
 export interface IMappedEndpointDetailed extends IMappedEndpointBasic {
   readonly controller: ControllerClass;
   readonly handlerName: string;
   readonly fullUrlPath: string;
   readonly parameters: ReadonlyMap<number, IMappedEndpointParameter>;
+  readonly explicitParameters: ReadonlyArray<MappedEndpointParameter>;
+  readonly securityAssignments: ReadonlyArray<ISecurityAssignment>;
 
   readonly requestBody?: IMappedEndpointRequestBody;
   readonly description: string;
@@ -241,6 +294,12 @@ export interface IMappedEndpointDetailed extends IMappedEndpointBasic {
   readonly responses: MethodReturnByCode;
 }
 
+/**
+ * Every parameter in every endpoint handler must be decorated with an
+ * `IParameterResolver` that tells the application what to do in order to
+ * create that parameter (so that it may be passed to the user's endpoint
+ * handler function).
+ */
 export interface IParameterResolver<T = any> {
   readonly friendlyName: string;
 

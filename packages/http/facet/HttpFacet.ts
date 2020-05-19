@@ -24,6 +24,7 @@ import {
   IMappedController,
   IParameterResolver,
 } from '../types/controller-info';
+import { makeEndpointSchemaForFastify } from './fastify-schema-builder';
 import { IHttpOptions } from './IHttpOptions';
 import { HTTP, HTTP_REQUEST } from './lifecycle';
 import { buildMappedControllerInfo } from './metadata-utils';
@@ -34,7 +35,6 @@ import {
   findControllers,
   findHooks,
   getAllParametersForEndpoint,
-  makeEndpointSchemaForFastify,
 } from './utils';
 
 const DEFAULT_HTTP_PORT = 10080;
