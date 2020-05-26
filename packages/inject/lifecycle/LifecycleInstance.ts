@@ -12,6 +12,11 @@ import { extractInjectedParameters, prettyPrintProviders } from '../domain/utils
 import { CircularDependencyError, DependencyCreationError, DependencyNotSatisfiedError } from './errors';
 import { ILifecycle } from './lifecycles';
 
+export interface IFunctionalInject<T = any> {
+  readonly inject: ReadonlyArray<symbol>;
+  readonly fn: (...args: Array<any>) => Promise<T>;
+}
+
 /**
  *  `LifecycleInstance` defines, as one would expect, an instance
  *  of a lifecycle. This tracks all of the dependencies built through
@@ -314,9 +319,9 @@ export class LifecycleInstance {
 
   async executeFunctional<T = any>(
     domain: Domain,
-    inject: ReadonlyArray<symbol>,
-    fn: (...args: Array<any>) => Promise<T>,
+    functional: IFunctionalInject<T>,
   ): Promise<T> {
+    const { inject, fn } = functional;
     const resolvedInjects = await Promise.all(inject.map(i => this.resolve(i, domain)));
 
     return fn(...resolvedInjects);

@@ -1,3 +1,4 @@
+import * as _ from 'lodash';
 import 'reflect-metadata';
 
 import { IModule, LOGGER } from '@stockade/core';
@@ -13,7 +14,8 @@ import {
 
 import { AnnotationKeys } from '../annotations/keys';
 import { HttpStatus } from '../http-statuses';
-import { ControllerClass, IMappedEndpointBasic, IMappedEndpointRequestBody, ISecurityAssignment } from '../types';
+import { ISecurity } from '../security';
+import { ControllerClass, IMappedEndpointBasic, IMappedEndpointRequestBody } from '../types';
 import {
   IMappedController,
   IMappedControllerBasic,
@@ -81,10 +83,10 @@ function extractMappedEndpointMetadata(
             ? { [returnCode]: designReturnType }
             : {};
 
-    const securityAssignments: ReadonlyArray<ISecurityAssignment> = [
+    const securityAssignments: Array<ISecurity> = _.sortBy([
       ...(controllerBase['@stockade/http:SECURITY'] ?? []),
       ...(endpointBasicInfo['@stockade/http:SECURITY'] ?? []),
-    ];
+    ], i => i.weight ?? 0);
 
 
     let endpointInfo: IMappedEndpointDetailed = {

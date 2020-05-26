@@ -5,6 +5,7 @@ export {
 } from './annotations';
 export * from './domain';
 export {
+  IFunctionalInject,
   ILifecycle,
   LifecycleInstance,
   GLOBAL,

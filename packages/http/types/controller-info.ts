@@ -20,11 +20,6 @@ import { FastifyHookClass } from '../hooks';
 import { ISecurity } from '../security';
 import { ControllerClass } from '../types';
 
-export interface ISecurityAssignment {
-  cls: Class<ISecurity<any>>,
-  args: StringTo<any>,
-}
-
 /**
  * OAS3-related fields that can be applied to either a controller _or_ to an endpoint.
  * If applied to a controller, they will be set for all endpoints in that controller.
@@ -83,7 +78,7 @@ export interface IOAS3EndpointInfo extends IOAS3ControllerOrEndpointInfo {
  */
 export interface IControllerOrEndpointBasic {
   readonly [AnnotationKeys.EXPLICIT_PARAMETERS]?: ReadonlyArray<MappedEndpointParameter>;
-  readonly [AnnotationKeys.SECURITY]?: ReadonlyArray<ISecurityAssignment>;
+  readonly [AnnotationKeys.SECURITY]?: ReadonlyArray<ISecurity>;
 }
 
 /**
@@ -286,7 +281,7 @@ export interface IMappedEndpointDetailed extends IMappedEndpointBasic {
   readonly fullUrlPath: string;
   readonly parameters: ReadonlyMap<number, IMappedEndpointParameter>;
   readonly explicitParameters: ReadonlyArray<MappedEndpointParameter>;
-  readonly securityAssignments: ReadonlyArray<ISecurityAssignment>;
+  readonly securityAssignments: ReadonlyArray<ISecurity>;
 
   readonly requestBody?: IMappedEndpointRequestBody;
   readonly description: string;

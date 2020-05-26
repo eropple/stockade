@@ -34,7 +34,6 @@ export class OASBuilder {
     private readonly config: OpenAPIConfig,
   ) {
     this.logger = logger.child({ component: this.constructor.name });
-    this.logger.level = 'debug';
     this.schematizerInstance = schematizer.makeDocumentInstance('#/components/schemas');
   }
 

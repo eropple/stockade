@@ -19,7 +19,10 @@ import {
   IPreSerializationHook,
   IPreValidationHook,
 } from '../hooks';
+import { ForbiddenResponse, HttpResponse, UnauthorizedResponse } from '../http-responses';
+import { HttpStatus } from '../http-statuses';
 import { CONTROLLERS, REPLY, REQUEST, SCHEMATIZER } from '../inject-keys';
+import { SecurityOutcome } from '../security';
 import {
   IMappedController,
   IParameterResolver,
@@ -413,45 +416,81 @@ export class HttpFacet extends FacetBase {
             url,
             schema: routeSchema,
             handler: async (request, reply) => {
-              const hLogger = (request.log as Logger).child({ controllerName, handlerName });
-              const lifecycle: LifecycleInstance = request.$stockade.lifecycleInstance;
+              try {
+                const hLogger = (request.log as Logger).child({ controllerName, handlerName });
+                const lifecycle: LifecycleInstance = request.$stockade.lifecycleInstance;
 
-              // overrides the external logger for this scope only
-              lifecycle.registerTemporary(LOGGER, hLogger);
+                // overrides the external logger for this scope only
+                lifecycle.registerTemporary(LOGGER, hLogger);
 
-              // build our controller instance...
-              const controllerInstance = await lifecycle.instantiate(
-                controllerInfo.controller,
-                controllerInfo.domain,
-              );
+                // run our securities
+                let ok = false;
+                for (const security of endpointInfo.securityAssignments) {
+                  const outcome = await lifecycle.executeFunctional(controllerInfo.domain, security);
 
-              // applying IMethodOptions#returnHeaders
-              for (const [headerName, value] of Object.entries(endpointOptions.returnHeaders ?? {})) {
-                reply.header(headerName, value);
-              }
+                  if (outcome === SecurityOutcome.OK) {
+                    hLogger.debug({ securityName: security.name }, 'Security passed.');
+                    ok = true;
+                    break;
+                  }
 
-              // resolving arguments to pass to method
-              const handlerArguments: Array<any> = await Promise.all(
-                endpointParameterResolvers.map(
-                  r => lifecycle.executeFunctional(controllerInfo.domain, r.inject, r.fn),
-                ),
-              );
-
-              // invoking handler method with extracted parameters
-              const ret = await (controllerInstance[handlerName] as any)(...handlerArguments);
-
-              if (!endpointOptions.manualReturn) {
-                // happy path return: do the presumably right thing with the returned data
-                reply.status(endpointInfo.returnCode);
-
-                return ret;
-              // tslint:disable-next-line: unnecessary-else
-              } else {
-                if (typeof(ret) !== 'undefined') {
-                  hLogger.warn(`Method is flagged for manual return (\`reply.send()\`) but returned non-undefined: ${ret}`);
+                  if (outcome === SecurityOutcome.FORBIDDEN) {
+                    hLogger.debug({ securityName: security.name }, 'Security forbids access.');
+                    throw new ForbiddenResponse();
+                  }
+                }
+                if (!ok) {
+                  throw new UnauthorizedResponse();
                 }
 
-                return 'if you are seeing this, somebody forgot to reply.send()';
+
+                // build our controller instance...
+                const controllerInstance = await lifecycle.instantiate(
+                  controllerInfo.controller,
+                  controllerInfo.domain,
+                );
+
+                // applying IMethodOptions#returnHeaders
+                for (const [headerName, value] of Object.entries(endpointOptions.returnHeaders ?? {})) {
+                  reply.header(headerName, value);
+                }
+
+                // resolving arguments to pass to method
+                const handlerArguments: Array<any> = await Promise.all(
+                  endpointParameterResolvers.map(
+                    r => lifecycle.executeFunctional(controllerInfo.domain, r),
+                  ),
+                );
+
+                // invoking handler method with extracted parameters
+                const ret = await (controllerInstance[handlerName] as any)(...handlerArguments);
+
+                if (!endpointOptions.manualReturn) {
+                  // happy path return: do the presumably right thing with the returned data
+                  reply.status(endpointInfo.returnCode);
+
+                  return ret;
+                // tslint:disable-next-line: unnecessary-else
+                } else {
+                  if (typeof(ret) !== 'undefined') {
+                    hLogger.warn(`Method is flagged for manual return (\`reply.send()\`) but returned non-undefined: ${ret}`);
+                  }
+
+                  return 'if you are seeing this, somebody forgot to reply.send()';
+                }
+              } catch (err) {
+                if (err instanceof HttpResponse) {
+                  reply.code(err.code).type('application/json').send({
+                    id: request.id,
+                    ...err.body,
+                  });
+                } else {
+                  // TODO: debug mode responses
+                  reply.code(HttpStatus.INTERNAL_SERVER_ERROR).type('application/json').send({
+                    id: request.id,
+                    error: 'An unhandled error occurred.'
+                  });
+                }
               }
             },
           });
