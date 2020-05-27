@@ -12,5 +12,9 @@ export {
   SINGLETON,
 } from './lifecycle';
 
+export {
+  IOnLifecycleCleanup,
+} from './IOnLifecycleCleanup';
+
 export * from './types';
 export * from './resolver';

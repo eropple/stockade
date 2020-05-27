@@ -1,14 +1,17 @@
 import AsyncLock from 'async-lock';
 import hirestime from 'hirestime';
+import * as _ from 'lodash';
 import { serializeError } from 'serialize-error';
 import { Class, Falsey } from 'utility-types';
 
 import { prettyPrintKeys } from '@stockade/utils/conversions';
-import { Logger } from '@stockade/utils/logging';
+import { FallbackLogger, Logger } from '@stockade/utils/logging';
 
 import { Domain, DomainProvider, isDomainFactoryProvider, isDomainValueProvider } from '../domain';
 import { DependencyKey, forKey } from '../domain/dependency-utils';
 import { extractInjectedParameters, prettyPrintProviders } from '../domain/utils';
+import { InjectError } from '../error';
+import { hasLifecycleCleanup, IOnLifecycleCleanup } from '../IOnLifecycleCleanup';
 import { CircularDependencyError, DependencyCreationError, DependencyNotSatisfiedError } from './errors';
 import { ILifecycle } from './lifecycles';
 
@@ -25,6 +28,12 @@ export interface IFunctionalInject<T = any> {
  */
 export class LifecycleInstance {
   private static _classInjectCache: Map<Class<any>, ReadonlyArray<symbol>> = new Map();
+  private static _nextId: number = 0;
+
+  /**
+   * Internal, incremented ID.
+   */
+  private readonly _id: number;
 
   //  TODO: change the LifecycleInstance into an iterative solver
   //        For most use cases, a recursive, stack-based solver is fine. It's
@@ -59,21 +68,52 @@ export class LifecycleInstance {
    */
   private readonly _temporaryCache: Map<symbol, Exclude<any, undefined>> = new Map();
 
+  /**
+   * List of objects that need to be cleaned up on exit.
+   */
+  private readonly _cleanupOnExit: Array<IOnLifecycleCleanup> = [];
+
+  private _isCleanedUp: boolean = false;
+
+  /**
+   * If true, this lifecycle has been cleaned up and cannot be used for resolution.
+   */
+  get isCleanedUp() { return this._isCleanedUp; }
+
   constructor(
     readonly lifecycle: ILifecycle,
     readonly parent: LifecycleInstance | null,
     logger: Logger,
   ) {
+    // TODO:  make this constructor private so we can iterate children
+    //        Right now we can't call cleanup() on child lifecycles because we can't
+    //        (easily and without breaking encapsulation) keep track of all children.
+    //        This could result in situations where a child tries to access a parent
+    //        if it misses in its own cache and then errors. This can be an undefined
+    //        case and Stockade should be fine, but it's weird and ugly and kind of
+    //        random-feeling.
+    this._id = LifecycleInstance._nextId;
+    LifecycleInstance._nextId += 1;
+
     this._logger = logger.child({
+      lifecycleInstanceId: this._id,
       component: this.constructor.name,
       lifecycleKey: lifecycle.name,
     });
 
     if (lifecycle.parent) {
       if (!parent) {
-        throw new Error(
+        throw new InjectError(
           `LifecycleInstance '${lifecycle.name.description}' requires a parent ` +
           `LifecycleInstance of name '${lifecycle.parent.name.description}'.`,
+        );
+      }
+
+      if (parent && parent.isCleanedUp) {
+        throw new Error(
+          `LifecycleInstance '${lifecycle.name.description}' is parented to ` +
+          `LifecycleInstance of name '${lifecycle.parent?.name.description}',` +
+          `but the parent is cleaned up.`,
         );
       }
 
@@ -91,6 +131,39 @@ export class LifecycleInstance {
     }
 
     this._logger.trace('Constructed.');
+  }
+
+  makeChild(lifecycle: ILifecycle): LifecycleInstance {
+    return new LifecycleInstance(lifecycle, this, this._logger);
+  }
+
+  async withChild<T>(lifecycle: ILifecycle, fn: (instance: LifecycleInstance) => Promise<T>): Promise<T> {
+    const child = this.makeChild(lifecycle);
+
+    const ret = await fn(child);
+
+    await this.cleanup();
+
+    return ret;
+  }
+
+  async cleanup(): Promise<void> {
+    this._logger.error('Double-cleanup for lifecycle.');
+
+    // TODO:  make this smarter (if needed; check first!)
+    //        This can definitely be made smarter if it's too slow. We record `IOnLifecycleCleanup`
+    //        instances when we find `instantiate`. I didn't want to prematurely optimize this, but
+    //        we can stash a set of its dependencies and do a topographical sort on top of this to
+    //        paralellize cleanup. Maybe there's a way to do that in a super clever way and keep
+    //        this list in `instantiate` without causing up-front performance?
+    //
+    //        It's better to be slow during teardown than during initial setup, though, so we need
+    //        to see proof first.
+    for (const instance of _.reverse(this._cleanupOnExit)) {
+      await instance.onLifecycleCleanup();
+    }
+
+    this._isCleanedUp = true;
   }
 
   /**
@@ -111,6 +184,10 @@ export class LifecycleInstance {
    * @param value The value to return for this dependency key
    */
   registerTemporary(key: DependencyKey, value: Exclude<any, Falsey>): this {
+    if (this._isCleanedUp) {
+      throw new InjectError(`Lifecycle for '${this.lifecycle.name.description} was used after cleanup.`);
+    }
+
     // This could actually use the resolve cache, but I prefer separating them
     // so as to be abetter able to understand the behavior of the DI system when
     // debugging. ("Hey, where did this symbol come from...?")
@@ -133,6 +210,10 @@ export class LifecycleInstance {
     resolvingDomain: Domain = domain,
     getElapsed: () => number = hirestime(),
   ): Promise<T> {
+    if (this._isCleanedUp) {
+      throw new InjectError(`Lifecycle for '${this.lifecycle.name.description} was used after cleanup.`);
+    }
+
     if (seenKeys.has(key)) {
       throw new CircularDependencyError(
         `Circular dependency in component '${key.description}' with domain ` +
@@ -273,27 +354,31 @@ export class LifecycleInstance {
    *
    * @param cls The class to construct
    * @param domain The domain to resolve through
-   * @param transient If `true`, subsequent calls to the same lifecycle will return the same object
+   * @param reusable If `true`, subsequent calls to the same lifecycle will return the same object
    */
   async instantiate<T = any>(
     cls: Class<any>,
     domain: Domain,
-    transient: boolean = true,
+    reusable: boolean = true,
   ): Promise<T> {
+    if (this._isCleanedUp) {
+      throw new InjectError(`Lifecycle for '${this.lifecycle.name.description} was used after cleanup.`);
+    }
+
     const getElapsed = hirestime();
 
     const logger =
       this._logger.child({ resolveType: 'instantiate', className: cls.name, domainName: domain.name });
 
     logger.trace('Attempting to instantiate.');
-    const transientKey = `${cls.name}-${domain.name}`;
-    if (transient) {
-      logger.trace('This can be a transient; checking cache.');
-      const transientCached = this._instantiateCache.get(transientKey);
-      if (transientCached) {
-        logger.trace({ resolutionTimeInMs: getElapsed() }, 'Found in transient cache; returning.');
+    const reusableKey = `${cls.name}-${domain.name}`;
+    if (reusable) {
+      logger.trace('This can be a reusable; checking cache.');
+      const reusableCached = this._instantiateCache.get(reusableKey);
+      if (reusableCached) {
+        logger.trace({ resolutionTimeInMs: getElapsed() }, 'Found in reusable cache; returning.');
 
-        return transientCached;
+        return reusableCached;
       }
     }
 
@@ -307,9 +392,14 @@ export class LifecycleInstance {
     const resolvedInjects = await Promise.all(injects.map(i => this.resolve(i, domain)));
     const ret = new cls(...resolvedInjects);
 
-    if (transient) {
-      logger.trace('Placing in transient cache.');
-      this._instantiateCache.set(transientKey, ret);
+    if (reusable) {
+      logger.trace('Placing in reusable cache.');
+      this._instantiateCache.set(reusableKey, ret);
+    }
+
+    if (hasLifecycleCleanup(ret)) {
+      logger.trace('Placing in cleanup list.');
+      this._cleanupOnExit.push(ret);
     }
 
     logger.trace({ resolutionTimeInMs: getElapsed() }, 'Returning instantiated object.');
@@ -321,6 +411,10 @@ export class LifecycleInstance {
     domain: Domain,
     functional: IFunctionalInject<T>,
   ): Promise<T> {
+    if (this._isCleanedUp) {
+      throw new InjectError(`Lifecycle for '${this.lifecycle.name.description} was used after cleanup.`);
+    }
+
     const { inject, fn } = functional;
     const resolvedInjects = await Promise.all(inject.map(i => this.resolve(i, domain)));
 
