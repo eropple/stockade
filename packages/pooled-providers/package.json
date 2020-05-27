@@ -1,7 +1,7 @@
 {
-  "name": "@stockade/resource-providers",
+  "name": "@stockade/pooled-providers",
   "version": "0.1.0",
-  "description": "Helpers and utilities for building libraries centered around provisioning resources in a lifecycle.",
+  "description": "Helpers and utilities for building libraries centered around provisioning resources from pools.",
   "keywords": [
     "stockade"
   ],
