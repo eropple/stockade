@@ -70,7 +70,7 @@ export class Runner {
     this.#status = RunnerStatus.STARTING;
     await Promise.all(this.facets.map(async (f) => {
       this.logger.debug({ facetClass: f.constructor.name }, `Starting '${f.constructor.name}'.`);
-      await f.doStart();
+      await f.start();
       this.logger.debug({ facetClass: f.constructor.name }, `Started '${f.constructor.name}'.`);
     }));
     this.#status = RunnerStatus.RUNNING;
@@ -105,10 +105,13 @@ export class Runner {
     this.#status = RunnerStatus.STOPPING;
     await Promise.all(this.facets.map(async (f) => {
       this.logger.debug({ facetClass: f.constructor.name }, `Stopping '${f.constructor.name}'.`);
-      await f.doStop();
+      await f.stop();
       this.logger.debug({ facetClass: f.constructor.name }, `Stopped '${f.constructor.name}'.`);
     }));
     this.#status = RunnerStatus.STOPPED;
+
+    this.logger.debug('Cleaning up singleton lifecycle.');
+    await this._singletonLifecycleInstance.cleanup();
 
     this.logger.info('Runner has stopped.');
   }

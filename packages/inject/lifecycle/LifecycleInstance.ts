@@ -148,17 +148,25 @@ export class LifecycleInstance {
   }
 
   async cleanup(): Promise<void> {
-    this._logger.error('Double-cleanup for lifecycle.');
+    if (this._isCleanedUp) {
+      this._logger.error('Double-cleanup for lifecycle.');
+
+      return;
+    }
+
+    this._logger.debug('Cleaning up.');
 
     // TODO:  make this smarter (if needed; check first!)
-    //        This can definitely be made smarter if it's too slow. We record `IOnLifecycleCleanup`
-    //        instances when we find `instantiate`. I didn't want to prematurely optimize this, but
-    //        we can stash a set of its dependencies and do a topographical sort on top of this to
-    //        paralellize cleanup. Maybe there's a way to do that in a super clever way and keep
-    //        this list in `instantiate` without causing up-front performance?
+    //        This can definitely be made smarter if it's too slow. We record
+    //        `IOnLifecycleCleanup` instances when we find
+    //        `instantiate`/`resolve`. I didn't want to prematurely optimize
+    //        this, but we can stash a set of its dependencies and do a
+    //        topographical sort on top of this to paralellize cleanup. Maybe
+    //        there's a way to do that in a super clever way and keep this list
+    //        in `instantiate` without causing up-front performance?
     //
-    //        It's better to be slow during teardown than during initial setup, though, so we need
-    //        to see proof first.
+    //        It's better to be slow during teardown than during initial setup,
+    //        though, so we need to see proof first.
     for (const instance of _.reverse(this._cleanupOnExit)) {
       await instance.onLifecycleCleanup();
     }
@@ -272,6 +280,11 @@ export class LifecycleInstance {
         );
 
         this._resolveCache.set(key, created);
+
+        if (hasLifecycleCleanup(created)) {
+          logger.trace('Placing in cleanup list.');
+          this._cleanupOnExit.push(created);
+        }
 
         logger.debug({ resolutionTimeInMs: getElapsed() }, 'Created and added to cache; returning.');
 

@@ -30,4 +30,18 @@ export abstract class FacetBase {
 
   abstract doStart(): Promise<any>;
   abstract doStop(): Promise<any>;
+
+  async start(): Promise<any> {
+    const ret = await this.doStart();
+
+    return ret;
+  }
+
+  async stop(): Promise<any> {
+    const ret = await this.doStop();
+    this.logger.debug('Cleaning up facet lifecycle.');
+    await this.lifecycleInstance.cleanup();
+
+    return ret;
+  }
 }

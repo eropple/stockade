@@ -167,6 +167,12 @@ export class HttpFacet extends FacetBase {
       this._options.fastify.postConfigure(fastify);
     }
 
+    // this hook is added to the server last because it tears down the request lifecycle instance.
+    fastify.addHook('onResponse', async (req) => {
+      req.log.debug('Cleaning up request lifecycle.');
+      await req.$stockade.lifecycleInstance.cleanup();
+    })
+
     return fastify;
   }
 
