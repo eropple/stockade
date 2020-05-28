@@ -232,30 +232,6 @@ describe('Domain', () => {
               extractedFromAutoComponent: true,
             });
         });
-
-        it('resolves dynamic providers', async () => {
-          const domain = Domain.fromDefinition({
-            name: 'test',
-            dynamicProviders: (d, key, lcInstance, exp) => {
-              if (lcInstance.lifecycle === GLOBAL) {
-                const [domainName, token] = (key.description ?? 'WTF?!').split(':');
-                // not actually handled by this domain, so bail
-                if (domainName !== d.name || !token) {
-                  return null;
-                }
-
-                return bind(key).in(lcInstance.lifecycle).toValue(parseInt(token, 10));
-              }
-
-              return null;
-            },
-          });
-
-          const global = new LifecycleInstance(GLOBAL, null, FallbackLogger);
-
-          expect(await domain.resolveProvider(Symbol.for('test:123'), global))
-            .toMatchObject({ key: Symbol.for('test:123'), value: 123 });
-        });
       });
     });
   });

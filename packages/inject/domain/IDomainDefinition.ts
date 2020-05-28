@@ -40,18 +40,4 @@ export interface IDomainDefinition {
    * be provider definitions _or_ a class decorated with `@AutoComponent`.
    */
   readonly provides?: ReadonlyArray<IProviderDefinition | Class<any>>;
-
-  /**
-   * Sometimes, there's a need to build a dependency on-the-fly and to late-bind
-   * it based on this or that behavior. For example: TypeORM includes the concept
-   * of a 'repository' based on a data object. Having to specify these
-   * repositories up front requires hacks like NestJS's "dynamic modules" and
-   * their `forRoot`/`forFeature` mess.
-   *
-   * There is the possibility of pathological performance cases if this method is
-   * slow or blocks, but since it will be run precisely once per `[key, lifecycleKey]`
-   * pair, it seems unlikely to be a problem in the general case. (Using the above
-   * example, it would be invoked once per data class.)
-   */
-  readonly dynamicProviders?: DynamicProviderFn;
 }

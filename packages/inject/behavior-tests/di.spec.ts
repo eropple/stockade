@@ -344,86 +344,15 @@ describe('integrated DI tests', () => {
       }
     });
 
-    describe('dynamic providers', () => {
-      it ('should cache the object that has been created for the entire lifecycle', async () => {
-        let x = 1;
-        const domain = Domain.fromDefinition({
-          name: 'parent',
-          dynamicProviders: (d, key, lcInstance, exp) => {
-            // tslint:disable-next-line: increment-decrement
-            return lcInstance.lifecycle === SINGLETON ? bind('MyKey').in(SINGLETON).toValue(x++) : null;
-          },
-        });
-
-        const global = new LifecycleInstance(GLOBAL, null, FallbackLogger);
-        const singleton = new LifecycleInstance(SINGLETON, global, FallbackLogger);
-        const singleton2 = new LifecycleInstance(SINGLETON, global, FallbackLogger);
-
-        const a = await singleton.resolve(Symbol.for('MyKey'), domain);
-        const a2 = await singleton.resolve(Symbol.for('MyKey'), domain);
-        const b = await singleton2.resolve(Symbol.for('MyKey'), domain);
-
-        expect(a).toBe(a2);
-        expect(a).not.toBe(b);
-      });
-
-      it ('should error when attempting to get a dynamic provider from a child without exporting', async () => {
-        const domain = Domain.fromDefinition({
-          name: 'parent',
-          provides: [],
-          children: [
-            {
-              name: 'child',
-              dynamicProviders: (d, key, lcInstance, exp) => {
-                if (!exp && key === Symbol.for('ChildLocalKey') && lcInstance.lifecycle === GLOBAL) {
-                  return bind('ChildLocalKey').in(lcInstance.lifecycle).toValue(300);
-                }
-
-                if (key === Symbol.for('ChildExportKey') && lcInstance.lifecycle === GLOBAL) {
-                  return bind('ChildExportKey').in(lcInstance.lifecycle).toValue(1337);
-                }
-
-                return null;
-              },
-            },
-          ],
-        });
-
-        const global = new LifecycleInstance(GLOBAL, null, FallbackLogger);
-        // child should resolve the local key...
-        expect(await global.resolve(forKey('ChildLocalKey'), domain.children[0])).toBe(300);
-        // ...and the export key...
-        expect(await global.resolve(forKey('ChildExportKey'), domain.children[0])).toBe(1337);
-
-        // parent should resolve the export key...
-        expect(await global.resolve(forKey('ChildExportKey'), domain)).toBe(1337);
-        // parent should not resolve the local key.
-        try {
-          await global.resolve(forKey('ChildLocalKey'), domain);
-          expect('this should have failed').toBeFalsy();
-        } catch (err) {}
-      });
-    });
-
     it ('can override a dependency from the parent lifecycle when done explicitly', async () => {
       const domain = Domain.fromDefinition({
         name: 'parent',
         provides: [
           bind('MyOverriddenThing').in(GLOBAL).toValue(1),
-        ],
-        children: [
-          {
-            name: 'child',
-            dynamicProviders: async (d, key, lcInstance, exp) => {
-              if (key === Symbol.for('MyOverriddenThing') && lcInstance.lifecycle === SINGLETON) {
-                const globalValue = await lcInstance.parent?.resolve(key, d);
-
-                return bind(key).in(SINGLETON).toValue(globalValue + 1000);
-              }
-
-              return null;
-            },
-          },
+          bind('MyOverriddenThing').in(SINGLETON).toFactory({
+            inject: ['MyOverriddenThing'],
+            fn: (i) => i + 1000,
+          }),
         ],
       });
 

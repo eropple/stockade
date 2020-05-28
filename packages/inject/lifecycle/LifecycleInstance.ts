@@ -336,11 +336,24 @@ export class LifecycleInstance {
       if (isDomainFactoryProvider(provider)) {
         // Since we lock in resolve(), doing this as a Promise.all is safe.
         const args = await Promise.all(
-          provider.inject.map(dep => this.resolve(
-            dep,
-            resolvingDomain,
-            new Set(seenKeys)),
-          ),
+          provider.inject.map((dep) => {
+            if (dep !== provider.key) {
+              return this.resolve(dep, resolvingDomain, new Set(seenKeys));
+            }
+
+            if (!this.parent) {
+              throw new DependencyCreationError(
+                `Provider '${JSON.stringify(provider)}' tried to do an upwards dependency on itself but lacks ` +
+                `a parent. In Stockade, it is permissible for a provided component to use its own inject key as ` +
+                `a dependency; what this really means is "ask my parent for the dependency and give it to me". ` +
+                `The idea is to let you shadow things like the LOGGER dependency in order to inject new fields ` +
+                `or something like that. However, it is an error to use this upwards dependency if the lifecycle ` +
+                `instantiated within has no parent of its own.`,
+              );
+            }
+
+            return this.parent.resolve(dep, resolvingDomain);
+          }),
         );
 
         return provider.fn(...args);

@@ -81,7 +81,6 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     readonly imports: ReadonlyArray<IDomainImport>,
     readonly exports: ReadonlyArray<IDomainExport>,
     readonly provides: ReadonlyArray<DomainProvider>,
-    readonly dynamicProviders: DynamicProviderFn,
     readonly definition: TDomainDefinition,
     logger: Logger,
   ) {
@@ -174,16 +173,6 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     let provider = this._providesCache.get(cacheKey) || null;
     if (provider) {
       logger.debug('Found in provides cache.');
-    } else {
-      logger.trace('Not found in provides cache; attempting dynamic resolution.');
-      const dynamicProviderDef = await this.dynamicProviders(this, key, lifecycle, exportedOnly);
-
-      if (dynamicProviderDef) {
-        logger.debug('Dynamic provider is a HIT; normalizing and using.');
-        provider = Domain.normalizeProvider(dynamicProviderDef, logger);
-      } else {
-        logger.trace('No dynamic provider.');
-      }
     }
 
     // Not found locally; let's ask our children.
@@ -261,7 +250,6 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
       imports,
       exports,
       provides,
-      def.dynamicProviders || (() => null),
       def,
       baseLogger,
     );
