@@ -1,12 +1,13 @@
 import {
   Domain, LifecycleInstance, SINGLETON,
 } from '@stockade/inject';
+import { SINGLETON_LIFECYCLE } from '@stockade/inject/lifecycle';
 import { createLogger, Logger } from '@stockade/utils/logging';
 import { sleepAsync } from '@stockade/utils/sleep';
 
 import { CoreError } from '../errors';
-import { FacetBase, IFacetBehavior, IFacetBuilder } from '../facets';
-import { GLOBAL_LIFECYCLE } from '../global';
+import { FacetBase, IFacetBuilder } from '../facets';
+import { GLOBAL_LIFECYCLE_INSTANCE } from '../global';
 import { DEPENDENCY_LIFECYCLE, LOGGER } from '../inject-keys';
 import { AppSpecBuilder, IAppSpec, isAppSpecBuilder } from '../spec';
 import { IRunnerOptions } from './IRunnerOptions';
@@ -53,7 +54,7 @@ export class Runner {
 
     this.diDomain = Domain.fromDefinition(this.appSpec, null);
     this._singletonLifecycleInstance =
-      new LifecycleInstance(SINGLETON, GLOBAL_LIFECYCLE, this._baseLogger);
+      new LifecycleInstance(SINGLETON_LIFECYCLE, GLOBAL_LIFECYCLE_INSTANCE, this._baseLogger);
     this._singletonLifecycleInstance
       .registerTemporary(DEPENDENCY_LIFECYCLE, this._singletonLifecycleInstance)
       .registerTemporary(LOGGER, this.logger.child({ component: 'RunnerInject' }));

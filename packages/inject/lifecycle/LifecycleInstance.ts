@@ -80,6 +80,12 @@ export class LifecycleInstance {
    */
   get isCleanedUp() { return this._isCleanedUp; }
 
+  /**
+   * All lifecycle keys that this lifecycle instance can check. Includes its name
+   * plus all aliases.
+   */
+  readonly allLifecycleKeys: ReadonlyArray<symbol>;
+
   constructor(
     readonly lifecycle: ILifecycle,
     readonly parent: LifecycleInstance | null,
@@ -100,6 +106,8 @@ export class LifecycleInstance {
       component: this.constructor.name,
       lifecycleKey: lifecycle.name,
     });
+
+    this.allLifecycleKeys = [this.lifecycle.name, ...this.lifecycle.aliases];
 
     if (lifecycle.parent) {
       if (!parent) {

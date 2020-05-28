@@ -1,7 +1,6 @@
 import { Class } from 'utility-types';
 
 import {
-  DynamicProviderFn,
   ExportDefinition,
   ImportDefinition,
   IProviderDefinition,
@@ -41,12 +40,6 @@ export abstract class ModuleSpecBuilderBase<TModule extends IModule> {
 
   provide(...p: Array<IProviderDefinition | Class<any>>): this {
     this._mod = { ...this._mod, provides: (this._mod.provides ?? []).concat(...p) };
-
-    return this;
-  }
-
-  dynamicallyProvide(fn: DynamicProviderFn): this {
-    this._mod = { ...this._mod, dynamicProviders: fn };
 
     return this;
   }

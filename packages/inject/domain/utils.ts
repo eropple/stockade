@@ -40,7 +40,7 @@ export function prettyPrintProviders(providers: ReadonlyArray<DomainProvider>) {
       throw new UnrecognizedProviderError(`Could not introspect provider '${p}'.`);
     }
 
-    return `[${p.key.description} in ${p.lifecycle.name.description} (${type})]`;
+    return `[${p.key.description} in ${p.lifecycle.description} (${type})]`;
   });
 }
 

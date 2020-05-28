@@ -6,7 +6,7 @@ import { FallbackLogger } from '@stockade/utils/logging';
 import { AutoComponent, Inject } from '../annotations';
 import { bind, Domain } from '../domain';
 import { forKey } from '../domain/dependency-utils';
-import { GLOBAL, LifecycleInstance, SINGLETON } from '../lifecycle';
+import { FACET, GLOBAL, GLOBAL_LIFECYCLE, ILifecycle, LifecycleInstance, SINGLETON, SINGLETON_LIFECYCLE, SUB_FACET } from '../lifecycle';
 import {
   CircularDependencyError,
   DependencyNotSatisfiedError,
@@ -25,7 +25,7 @@ describe('integrated DI tests', () => {
         ],
       });
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
 
       const ret = await lifecycle.resolve(forKey('MyTestKey'), domain);
       expect(ret).toBe(5);
@@ -46,7 +46,7 @@ describe('integrated DI tests', () => {
       });
       const childDomain = domain.children[0];
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
 
       const retA = await lifecycle.resolve(forKey('MyParentKey'), domain);
       expect(retA).toBe(5);
@@ -68,7 +68,7 @@ describe('integrated DI tests', () => {
         ],
       });
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
 
       const ret = await lifecycle.resolve(forKey('MyChildKey'), domain);
       expect(ret).toBe(5);
@@ -95,7 +95,7 @@ describe('integrated DI tests', () => {
         ],
       });
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
       const obj = await lifecycle.resolve(forKey(Injected), domain);
 
       expect(obj.constructor).toBe(Injected);
@@ -122,7 +122,7 @@ describe('integrated DI tests', () => {
         ) {}
       }
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
       const obj = await lifecycle.instantiate(Instantiated, domain);
 
       expect(obj.constructor).toBe(Instantiated);
@@ -149,7 +149,7 @@ describe('integrated DI tests', () => {
         }
       }
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
       const obj = await lifecycle.instantiate(Instantiated, domain);
       const obj2 = await lifecycle.instantiate(Instantiated, domain);
 
@@ -177,7 +177,7 @@ describe('integrated DI tests', () => {
         }
       }
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
       const obj = await lifecycle.instantiate(Instantiated, domain, false);
       const obj2 = await lifecycle.instantiate(Instantiated, domain, false);
 
@@ -200,7 +200,7 @@ describe('integrated DI tests', () => {
         ) {}
       }
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
       lifecycle.registerTemporary('a', 10);
       const obj = await lifecycle.instantiate(Instantiated, domain);
 
@@ -226,7 +226,7 @@ describe('integrated DI tests', () => {
         provides: [A],
       });
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
       const obj1 = await lifecycle.resolve(forKey(A), domain);
       const obj2 = await lifecycle.resolve(forKey(A), domain);
 
@@ -243,7 +243,7 @@ describe('integrated DI tests', () => {
         ],
       });
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
 
       const result = await lifecycle.resolve(forKey('a'), domain);
       expect(result).toBe(32);
@@ -294,7 +294,7 @@ describe('integrated DI tests', () => {
         provides: [A, B, C, D],
       });
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
       const obj = await lifecycle.resolve(forKey(D), domain);
 
       expect(obj.constructor).toBe(D);
@@ -316,7 +316,7 @@ describe('integrated DI tests', () => {
         ],
       });
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
 
       try {
         await lifecycle.resolve(forKey('a'), domain);
@@ -335,7 +335,7 @@ describe('integrated DI tests', () => {
         provides: [A],
       });
 
-      const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+      const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
       try {
         await lifecycle.resolve(forKey('b'), domain);
         expect('this should have failed').toBeFalsy();
@@ -356,8 +356,8 @@ describe('integrated DI tests', () => {
         ],
       });
 
-      const global = new LifecycleInstance(GLOBAL, null, FallbackLogger);
-      const singleton = new LifecycleInstance(SINGLETON, global, FallbackLogger);
+      const global = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
+      const singleton = new LifecycleInstance(SINGLETON_LIFECYCLE, global, FallbackLogger);
 
       const retA = await global.resolve(forKey('MyOverriddenThing'), domain);
       expect(retA).toBe(1);
@@ -369,8 +369,8 @@ describe('integrated DI tests', () => {
 
   describe('tests across lifecycles', () => {
     it('should check parents to satisfy dependencies', async () => {
-      const global = new LifecycleInstance(GLOBAL, null, FallbackLogger);
-      const singleton = new LifecycleInstance(SINGLETON, global, FallbackLogger);
+      const global = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
+      const singleton = new LifecycleInstance(SINGLETON_LIFECYCLE, global, FallbackLogger);
 
       let x = 1;
 
@@ -396,8 +396,8 @@ describe('integrated DI tests', () => {
     });
 
     it('should preferentially use a provider in the lowermost lifecycle', async () => {
-      const global = new LifecycleInstance(GLOBAL, null, FallbackLogger);
-      const singleton = new LifecycleInstance(SINGLETON, global, FallbackLogger);
+      const global = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
+      const singleton = new LifecycleInstance(SINGLETON_LIFECYCLE, global, FallbackLogger);
 
       const domain = Domain.fromDefinition({
         name: 'test',
@@ -414,8 +414,8 @@ describe('integrated DI tests', () => {
     });
 
     it('should use parent lifecycle temporaries when resolving upward', async () => {
-      const global = new LifecycleInstance(GLOBAL, null, FallbackLogger);
-      const singleton = new LifecycleInstance(SINGLETON, global, FallbackLogger);
+      const global = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
+      const singleton = new LifecycleInstance(SINGLETON_LIFECYCLE, global, FallbackLogger);
 
       const domain = Domain.fromDefinition({
         name: 'test',
@@ -432,8 +432,8 @@ describe('integrated DI tests', () => {
     });
 
     it('should use local lifecycle temporaries before resolving to parent', async () => {
-      const global = new LifecycleInstance(GLOBAL, null, FallbackLogger);
-      const singleton = new LifecycleInstance(SINGLETON, global, FallbackLogger);
+      const global = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
+      const singleton = new LifecycleInstance(SINGLETON_LIFECYCLE, global, FallbackLogger);
 
       const domain = Domain.fromDefinition({
         name: 'test',
@@ -451,8 +451,8 @@ describe('integrated DI tests', () => {
     });
 
     it('should resolve a dependency across lifecycles AND across scopes', async () => {
-      const global = new LifecycleInstance(GLOBAL, null, FallbackLogger);
-      const singleton = new LifecycleInstance(SINGLETON, global, FallbackLogger);
+      const global = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
+      const singleton = new LifecycleInstance(SINGLETON_LIFECYCLE, global, FallbackLogger);
 
       let x = 1;
       let y = 10;
@@ -467,7 +467,7 @@ describe('integrated DI tests', () => {
         }
       }
 
-      @AutoComponent()
+      @AutoComponent({ lifecycle: SINGLETON })
       class B {
         readonly numB: number;
 
@@ -503,5 +503,46 @@ describe('integrated DI tests', () => {
       const retC = await singleton.resolve(forKey(B), domain);
       expect(retC).toBe(retB);
     });
+  });
+
+  it('should resolve a dependency for any alias of a lifecycle', async () => {
+    const global = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
+    const singleton = new LifecycleInstance(SINGLETON_LIFECYCLE, global, FallbackLogger);
+
+    const facetKey = Symbol.for(`test:Lifecycle:MyFacet`);
+    const facetLifecycle: ILifecycle = {
+      name: facetKey,
+      parent: SINGLETON_LIFECYCLE,
+      aliases: [FACET],
+    };
+    const facet = new LifecycleInstance(facetLifecycle, singleton, FallbackLogger);
+
+    const subFacetKey = Symbol.for(`test:Lifecycle:MySubFacet`);
+    const subFacetLifecycle: ILifecycle = {
+      name: facetKey,
+      parent: facetLifecycle,
+      aliases: [SUB_FACET],
+    };
+    const subFacet = new LifecycleInstance(facetLifecycle, singleton, FallbackLogger);
+
+    @AutoComponent({ lifecycle: facetKey })
+    class A {}
+
+    @AutoComponent({ lifecycle: FACET })
+    class B {}
+
+
+    const domain = Domain.fromDefinition({
+      name: 'parent',
+      provides: [A, B],
+    });
+
+
+    const retA = await facet.resolve(forKey(A), domain);
+    expect(retA.constructor).toBe(A);
+
+    const retB = await facet.resolve(forKey(B), domain);
+    expect(retB.constructor).toBe(B);
+
   });
 });

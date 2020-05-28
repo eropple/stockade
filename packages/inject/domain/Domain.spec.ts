@@ -3,7 +3,7 @@
 import { FallbackLogger } from '@stockade/utils/logging';
 
 import { AutoComponent, Inject } from '../annotations';
-import { GLOBAL, LifecycleInstance, SINGLETON } from '../lifecycle';
+import { GLOBAL, LifecycleInstance, SINGLETON, SUB_FACET } from '../lifecycle';
 import { bind } from './definition-helpers';
 import { forKey } from './dependency-utils';
 import { Domain } from './Domain';
@@ -45,7 +45,7 @@ describe('Domain', () => {
 
           expect(domain.children[0].imports).toHaveLength(1);
           expect(domain.children[0].imports[0])
-            .toEqual({ key: forKey('ImportDependencyKey'), lifecycle: SINGLETON, optional: false });
+            .toEqual({ key: forKey('ImportDependencyKey'), lifecycle: SUB_FACET, optional: false });
         });
 
         it('should honor optional import definitions', () => {
@@ -65,7 +65,7 @@ describe('Domain', () => {
 
           expect(domain.children[0].imports).toHaveLength(1);
           expect(domain.children[0].imports[0])
-            .toEqual({ key: forKey('ImportDependencyKey'), lifecycle: SINGLETON, optional: true });
+            .toEqual({ key: forKey('ImportDependencyKey'), lifecycle: SUB_FACET, optional: true });
         });
       });
 
@@ -104,12 +104,12 @@ describe('Domain', () => {
           const domainA = Domain.fromDefinition(defnA);
           expect(domainA.exports).toHaveLength(1);
           expect(domainA.exports[0])
-            .toEqual({ key: Symbol.for('DefaultConfigComponent'), lifecycle: SINGLETON });
+            .toEqual({ key: Symbol.for('DefaultConfigComponent'), lifecycle: SUB_FACET });
 
           const domainB = Domain.fromDefinition(defnB);
           expect(domainB.exports).toHaveLength(1);
           expect(domainB.exports[0])
-            .toEqual({ key: Symbol.for('QWOP'), lifecycle: SINGLETON });
+            .toEqual({ key: Symbol.for('QWOP'), lifecycle: SUB_FACET });
 
           const domainC = Domain.fromDefinition(defnC);
           expect(domainC.exports).toHaveLength(1);
@@ -140,7 +140,7 @@ describe('Domain', () => {
           });
 
           expect(domain.provides).toHaveLength(1);
-          expect(domain.provides[0]).toEqual({ key: forKey('SomeKey'), lifecycle: SINGLETON, value: 5 });
+          expect(domain.provides[0]).toEqual({ key: forKey('SomeKey'), lifecycle: SUB_FACET, value: 5 });
         });
 
         it('normalizes autocomponents to their spec (no args)', () => {
@@ -179,7 +179,7 @@ describe('Domain', () => {
           expect(domainA.provides[0])
             .toMatchObject({
               key: Symbol.for('DefaultConfigComponent'),
-              lifecycle: SINGLETON,
+              lifecycle: SUB_FACET,
               inject: [],
               extractedFromAutoComponent: true,
             });
@@ -189,7 +189,7 @@ describe('Domain', () => {
           expect(domainB.provides[0])
             .toMatchObject({
               key: Symbol.for('QWOP'),
-              lifecycle: SINGLETON,
+              lifecycle: SUB_FACET,
               inject: [],
               extractedFromAutoComponent: true,
             });
@@ -227,7 +227,7 @@ describe('Domain', () => {
           expect(domain.provides[0])
             .toMatchObject({
               key: Symbol.for('ConstructorInjectionParameters'),
-              lifecycle: SINGLETON,
+              lifecycle: SUB_FACET,
               inject: [Symbol.for('Dependency'), Symbol.for('SomeKeyThing')],
               extractedFromAutoComponent: true,
             });

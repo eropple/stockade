@@ -1,13 +1,14 @@
 import { ILifecycle, SINGLETON } from '@stockade/inject';
-import { FACET, SUB_FACET } from '@stockade/inject/lifecycle';
+import { FACET, SINGLETON_LIFECYCLE, SUB_FACET } from '@stockade/inject/lifecycle';
 
 /**
  * The lifecycle that corresponds to the startup and shutdown of the HTTP
  * facet within the Stockade runner.
  */
-export const HTTP: ILifecycle = {
-  name: Symbol.for('http'),
-  parent: SINGLETON,
+export const HTTP: symbol = Symbol.for(`@stockade/http:Lifecycle:HTTP`);
+export const HTTP_LIFECYCLE: ILifecycle = {
+  name: HTTP,
+  parent: SINGLETON_LIFECYCLE,
   aliases: [FACET],
 };
 
@@ -15,9 +16,10 @@ export const HTTP: ILifecycle = {
  * The lifecycle that corresponds to the complete request workflow, from
  * request receipt to request close, for a HTTP request.
  */
-export const HTTP_REQUEST: ILifecycle = {
-  name: Symbol.for('http_request'),
-  parent: HTTP,
+export const HTTP_REQUEST: symbol = Symbol.for(`@stockade/http:Lifecycle:HTTP_REQUEST`);
+export const HTTP_REQUEST_LIFECYCLE: ILifecycle = {
+  name: HTTP_REQUEST,
+  parent: HTTP_LIFECYCLE,
   aliases: [SUB_FACET],
 };
 
@@ -25,8 +27,9 @@ export const HTTP_REQUEST: ILifecycle = {
  * The lifecycle that corresponds to a complete WebSocket session, providing
  * resource (though, hopefully, not _data_) persistence across that WebSocket session.
  */
-export const WS_SESSION: ILifecycle = {
-  name: Symbol.for('ws_session'),
-  parent: HTTP,
+export const WS_SESSION: symbol = Symbol.for(`@stockade/http:Lifecycle:WS_SESSION`);
+export const WS_SESSION_LIFECYCLE: ILifecycle = {
+  name: WS_SESSION,
+  parent: HTTP_REQUEST_LIFECYCLE,
   aliases: [SUB_FACET],
 };

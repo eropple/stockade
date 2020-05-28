@@ -1,6 +1,6 @@
 import { Class } from 'utility-types';
 
-import { ILifecycle, SINGLETON } from '../lifecycle';
+import { ILifecycle, SINGLETON, SUB_FACET } from '../lifecycle';
 import { DependencyKey } from './dependency-utils';
 import { IClassProviderDefinition, IFactoryProviderDefinition, IValueProviderDefinition, PromiseOr } from './types';
 
@@ -17,23 +17,23 @@ export interface IProviderBuildTerminal {
 export class ProviderDefinitionKeyHelper implements IProviderBuildTerminal {
   constructor(readonly key: DependencyKey) {}
 
-  in(lifecycle: ILifecycle) {
+  in(lifecycle: symbol) {
     return new ProviderDefinitionKeyLifecycleHelper(lifecycle, this.key);
   }
 
   toValue<T = any>(value: T): IValueProviderDefinition<T> {
-    return this.in(SINGLETON).toValue(value);
+    return this.in(SUB_FACET).toValue(value);
   }
   toClass<T = any>(cls: Class<T>): IClassProviderDefinition<T> {
-    return this.in(SINGLETON).toClass(cls);
+    return this.in(SUB_FACET).toClass(cls);
   }
   toFactory<T = any>(args: ToFactoryArgs<T>): IFactoryProviderDefinition<T> {
-    return this.in(SINGLETON).toFactory(args);
+    return this.in(SUB_FACET).toFactory(args);
   }
 }
 
 export class ProviderDefinitionKeyLifecycleHelper implements IProviderBuildTerminal {
-  constructor(readonly lifecycle: ILifecycle, readonly key: DependencyKey) {}
+  constructor(readonly lifecycle: symbol, readonly key: DependencyKey) {}
 
   toValue<T = any>(value: T): IValueProviderDefinition<T> {
     return { key: this.key, value, lifecycle: this.lifecycle };

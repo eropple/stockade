@@ -29,7 +29,7 @@ import {
 } from '../types/controller-info';
 import { makeEndpointSchemaForFastify } from './fastify-schema-builder';
 import { IHttpOptions } from './IHttpOptions';
-import { HTTP, HTTP_REQUEST } from './lifecycle';
+import { HTTP_LIFECYCLE, HTTP_REQUEST_LIFECYCLE } from './lifecycle';
 import { buildMappedControllerInfo } from './metadata-utils';
 import { buildSchematizer, extractParameterResolversFromParameters } from './schemas';
 import {
@@ -43,7 +43,7 @@ import {
 const DEFAULT_HTTP_PORT = 10080;
 
 const HTTP_BEHAVIOR: IFacetBehavior = {
-  facetRootLifecycle: HTTP,
+  facetRootLifecycle: HTTP_LIFECYCLE,
 };
 
 export function isHttpFacet(obj: unknown): obj is HttpFacet {
@@ -133,7 +133,7 @@ export class HttpFacet extends FacetBase {
     // this hook is added to the server first because it needs to run at start to attach the
     // lifecycle used by other stuff.
     fastify.addHook('onRequest', (req, reply, done) => {
-      const requestLc = new LifecycleInstance(HTTP_REQUEST, this.lifecycleInstance, this.logger);
+      const requestLc = new LifecycleInstance(HTTP_REQUEST_LIFECYCLE, this.lifecycleInstance, this.logger);
       req.log = (req.log as Logger).child({ component: 'RequestLogger' });
 
       // As the id might not be generated, let's stuff it back into the request, as well as the reply

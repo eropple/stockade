@@ -3,7 +3,7 @@ import { FallbackLogger } from '@stockade/utils/logging';
 import { AutoComponent } from '../annotations';
 import { Domain, forKey } from '../domain';
 import { IOnLifecycleCleanup } from '../IOnLifecycleCleanup';
-import { GLOBAL, LifecycleInstance } from '../lifecycle';
+import { GLOBAL, GLOBAL_LIFECYCLE, LifecycleInstance } from '../lifecycle';
 
 describe('cleanup tests', () => {
   it('should clean up a component upon lifecycle cleanup', async () => {
@@ -23,7 +23,7 @@ describe('cleanup tests', () => {
 
     expect(hasCleanedUpObject).toBe(false);
 
-    const lifecycle = new LifecycleInstance(GLOBAL, null, FallbackLogger);
+    const lifecycle = new LifecycleInstance(GLOBAL_LIFECYCLE, null, FallbackLogger);
     const obj1 = await lifecycle.resolve(forKey(CleanedUpThing), domain);
 
     expect(hasCleanedUpObject).toBe(false);

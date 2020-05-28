@@ -1,7 +1,6 @@
 import { Class } from 'utility-types';
 
 import {
-  DynamicProviderFn,
   ExportDefinition,
   IDomainDefinition,
   ImportDefinition,
@@ -20,7 +19,6 @@ export interface IModule extends IDomainDefinition {
   readonly imports?: ReadonlyArray<ImportDefinition | DependencyKey>;
   readonly exports?: ReadonlyArray<ExportDefinition | DependencyKey>;
   readonly provides?: ReadonlyArray<IProviderDefinition | Class<any>>;
-  readonly dynamicProviders?: DynamicProviderFn;
 }
 
 export interface IAppSpec extends IModule {

@@ -24,5 +24,8 @@ export const FACET: symbol = Symbol.for(`@stockade/inject:LifecycleAliases:FACET
  */
 export const SUB_FACET: symbol = Symbol.for(`@stockade/inject:LifecycleAliases:SUB_FACET`);
 
-export const GLOBAL: ILifecycle = { name: Symbol.for(GLOBAL_LIFECYCLE_NAME), parent: null, aliases: [] };
-export const SINGLETON: ILifecycle = { name: Symbol.for(SINGLETON_LIFECYCLE_NAME), parent: GLOBAL, aliases: [] };
+export const GLOBAL: symbol = Symbol.for(`@stockade/inject:Lifecycle:GLOBAL`);
+export const SINGLETON: symbol = Symbol.for(`@stockade/inject:Lifecycle:SINGLETON`);
+
+export const GLOBAL_LIFECYCLE: ILifecycle = { name: GLOBAL, parent: null, aliases: [] };
+export const SINGLETON_LIFECYCLE: ILifecycle = { name: SINGLETON, parent: GLOBAL_LIFECYCLE, aliases: [] };

@@ -1,18 +1,18 @@
 import 'reflect-metadata';
 import { Class } from 'utility-types';
 
-import { classMergeObjectMetadata, classSetMetadata } from '@stockade/utils/metadata';
+import { classMergeObjectMetadata } from '@stockade/utils/metadata';
 
-import { ILifecycle, SINGLETON } from '../lifecycle';
+import { SUB_FACET } from '../lifecycle';
 import { MetadataKeys } from './metadata-keys';
 
 export interface IAutoComponentArgs {
   key?: string;
-  lifecycle: ILifecycle;
+  lifecycle: symbol;
 }
 
 export const DEFAULT_AUTO_COMPONENT_ARGS: IAutoComponentArgs = {
-  lifecycle: SINGLETON,
+  lifecycle: SUB_FACET,
 };
 
 export const {

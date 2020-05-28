@@ -5,12 +5,11 @@ import { FallbackLogger, Logger } from '@stockade/utils/logging';
 import { isClass } from '@stockade/utils/type-guards';
 
 import { getAutoComponentMetadataOrFail } from '../annotations/auto-component.decorator';
-import { ILifecycle, LifecycleInstance, SINGLETON } from '../lifecycle';
+import { ILifecycle, LifecycleInstance, SINGLETON, SUB_FACET } from '../lifecycle';
 import { forKey } from './dependency-utils';
 import { IDomainDefinition } from './IDomainDefinition';
 import {
   DomainProvider,
-  DynamicProviderFn,
   ExportDefinition,
   IDomainExport,
   IDomainFactoryProvider,
@@ -25,6 +24,9 @@ import {
   ResolutionKey,
 } from './types';
 import { extractInjectedParameters } from './utils';
+
+const DEFAULT_COMPONENT_LIFECYCLE_KEY = SUB_FACET;
+
 
 // TODO: note in docs that `:_:` is illegal in provider names.
 function cacheKeyForResolutionKey(key: symbol, lifecycleKey: symbol) {
@@ -94,11 +96,11 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     }
 
     imports.forEach(i =>
-      this._importCache.add(cacheKeyForResolutionKey(i.key, i.lifecycle.name)));
+      this._importCache.add(cacheKeyForResolutionKey(i.key, i.lifecycle)));
     exports.forEach(e =>
-      this._exportCache.add(cacheKeyForResolutionKey(e.key, e.lifecycle.name)));
+      this._exportCache.add(cacheKeyForResolutionKey(e.key, e.lifecycle)));
     provides.forEach(p =>
-      this._providesCache.set(cacheKeyForResolutionKey(p.key, p.lifecycle.name), p));
+      this._providesCache.set(cacheKeyForResolutionKey(p.key, p.lifecycle), p));
   }
 
   /**
@@ -279,29 +281,33 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
 
   private static normalizeImport(i: string | symbol | ImportDefinition | Class<any>): IDomainImport {
     if (isImportDefinition(i)) {
-      return { key: forKey(i.key), lifecycle: i.lifecycle ?? SINGLETON, optional: i.optional };
+      return {
+        key: forKey(i.key),
+        lifecycle: i.lifecycle ?? DEFAULT_COMPONENT_LIFECYCLE_KEY,
+        optional: i.optional,
+      };
     }
 
     if (isString(i) || isSymbol(i)) {
-      return { key: forKey(i), lifecycle: SINGLETON, optional: false };
+      return { key: forKey(i), lifecycle: DEFAULT_COMPONENT_LIFECYCLE_KEY, optional: false };
     }
 
     const autoComponentMetadata = getAutoComponentMetadataOrFail(i);
 
     return {
       key: forKey(i),
-      lifecycle: autoComponentMetadata.lifecycle ?? SINGLETON,
+      lifecycle: autoComponentMetadata.lifecycle ?? DEFAULT_COMPONENT_LIFECYCLE_KEY,
       optional: false,
     };
   }
 
   private static normalizeExport(e: string | symbol | ExportDefinition | Class<any>): IDomainExport {
     if (isExportDefinition(e)) {
-      return { key: forKey(e.key), lifecycle: e.lifecycle ?? SINGLETON };
+      return { key: forKey(e.key), lifecycle: e.lifecycle ?? DEFAULT_COMPONENT_LIFECYCLE_KEY };
     }
 
     if (isString(e) || isSymbol(e)) {
-      return { key: forKey(e), lifecycle: SINGLETON };
+      return { key: forKey(e), lifecycle: DEFAULT_COMPONENT_LIFECYCLE_KEY };
     }
 
     if (isClass(e)) {// autocomponent
@@ -317,7 +323,7 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     if (isValueProviderDefinition(p)) {
       const vp: IDomainValueProvider = {
         key: forKey(p.key),
-        lifecycle: p.lifecycle ?? SINGLETON,
+        lifecycle: p.lifecycle ?? DEFAULT_COMPONENT_LIFECYCLE_KEY,
         value: p.value,
       };
 
@@ -327,7 +333,7 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     if (isFactoryProviderDefinition(p)) {
       const fp: IDomainFactoryProvider = {
         key: forKey(p.key),
-        lifecycle: p.lifecycle ?? SINGLETON,
+        lifecycle: p.lifecycle ?? DEFAULT_COMPONENT_LIFECYCLE_KEY,
         fn: p.fn,
         inject: (p.inject || []).map(forKey),
         extractedFromAutoComponent: false,
@@ -345,7 +351,7 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
 
       const provider: IDomainFactoryProvider = {
         key: forKey(autoComponentMetadata.key ?? p),
-        lifecycle: autoComponentMetadata.lifecycle ?? SINGLETON,
+        lifecycle: autoComponentMetadata.lifecycle ?? DEFAULT_COMPONENT_LIFECYCLE_KEY,
         inject: extractInjectedParameters(p),
         fn: (...args: Array<any>) => new p(...args),
         extractedFromAutoComponent: true,

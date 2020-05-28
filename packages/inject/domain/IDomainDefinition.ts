@@ -1,7 +1,7 @@
 import { Class } from 'utility-types';
 
 import { DependencyKey } from './dependency-utils';
-import { DynamicProviderFn, ExportDefinition, ImportDefinition, IProviderDefinition } from './types';
+import { ExportDefinition, ImportDefinition, IProviderDefinition } from './types';
 
 /**
  * A nested tree of `IDomainDefinition`s will be hydrated by the injector into a

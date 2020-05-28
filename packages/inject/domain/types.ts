@@ -1,19 +1,14 @@
 import { Class } from 'utility-types';
 
-import { ILifecycle, LifecycleInstance, SINGLETON } from '../lifecycle';
+import { ILifecycle } from '../lifecycle';
 import { DependencyKey } from './dependency-utils';
-import { Domain } from './Domain';
 
 export type PromiseOr<T> = T | Promise<T>;
 
 export interface IProviderDefinitionBase {
   key: DependencyKey;
-  lifecycle?: ILifecycle;
+  lifecycle?: symbol;
 }
-
-export type DynamicProviderFn =
-  (d: Domain, key: symbol, lifecycle: LifecycleInstance, exported: boolean) =>
-    IProviderDefinition | null | Promise<IProviderDefinition | null>;
 
 /**
  * This provider specifies a static value for a specific dependency key.
@@ -63,7 +58,7 @@ export function isFactoryProviderDefinition(t: any): t is IFactoryProviderDefini
  */
 export interface IDomainImport {
   key: symbol;
-  lifecycle: ILifecycle;
+  lifecycle: symbol;
   optional: boolean;
 }
 
@@ -72,12 +67,12 @@ export interface IDomainImport {
  */
 export interface IDomainExport {
   key: symbol;
-  lifecycle: ILifecycle;
+  lifecycle: symbol;
 }
 
 export interface IDomainProviderBase {
   key: symbol;
-  lifecycle: ILifecycle;
+  lifecycle: symbol;
 }
 
 export interface IDomainValueProvider<T = any> extends IDomainProviderBase {
@@ -115,9 +110,9 @@ export type DomainProvider<T = any> =
 export type ResolutionKey = { key: symbol; lifecycleKey: symbol; };
 
 // tslint:disable-next-line: interface-over-type-literal
-export type ImportDefinition = { key: DependencyKey, lifecycle?: ILifecycle, optional: boolean };
+export type ImportDefinition = { key: DependencyKey, lifecycle?: symbol, optional: boolean };
 // tslint:disable-next-line: interface-over-type-literal
-export type ExportDefinition = { key: DependencyKey, lifecycle?: ILifecycle };
+export type ExportDefinition = { key: DependencyKey, lifecycle?: symbol };
 
 export function isImportDefinition(o: any): o is ImportDefinition {
   return !!o.key && !!o.optional;
