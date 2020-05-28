@@ -31,6 +31,13 @@ function cacheKeyForResolutionKey(key: symbol, lifecycleKey: symbol) {
   return `${key.description}:_:${lifecycleKey.description}`;
 }
 
+function cacheKeysForLifecycle(key: symbol, lifecycle: ILifecycle): Array<string> {
+  return [
+    cacheKeyForResolutionKey(key, lifecycle.name),
+    ...lifecycle.aliases.map(i => cacheKeyForResolutionKey(key, i)),
+  ];
+}
+
 /**
  * The reified, normalized instance of an injector domain. Users create a
  * more friendly `IDomainDefinition`, which is turned into a `Domain` for
