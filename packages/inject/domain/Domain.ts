@@ -130,16 +130,36 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     lifecycle: LifecycleInstance,
     exportedOnly: boolean = false,
   ): Promise<DomainProvider | null> {
+    // TODO:  improve performance here
+    //        This is relatively slow if you "miss" a key and have to check
+    //        the lifecycle's aliases. As we're focusing mostly on using
+    //        `FACET` and `SUB_FACET` as lifecycle keys, this is potentially
+    //        a concern. We can unroll the cache keys being used in
+    //        `_doResolveProvider` and do something more clever when needed.
+    for (const name of lifecycle.allLifecycleKeys) {
+      const ret = await this._doResolveProvider(key, name, exportedOnly);
+
+      if (ret) { return ret; }
+    }
+
+    return null;
+  }
+
+  private async _doResolveProvider(
+    key: symbol,
+    lifecycleName: symbol,
+    exportedOnly: boolean,
+  ): Promise<DomainProvider | null> {
     const logger = this._logger.child({
       resolutionKey: {
         key: key.description,
-        lifecycleKey: lifecycle.lifecycle.name.description,
+        lifecycleKey: lifecycleName.description,
       },
     });
     logger.debug('Beginning resolution.');
 
     // TODO: note in docs that `:_:` is illegal in provider names.
-    const cacheKey = cacheKeyForResolutionKey(key, lifecycle.lifecycle.name);
+    const cacheKey = cacheKeyForResolutionKey(key, lifecycleName);
 
     // we store `null` results in the cache to avoid having to re-query on
     // unsatisfiable results.
@@ -157,12 +177,12 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     if (!exportedOnly && this._importCache.has(cacheKey)) {
       logger.debug('Found in import cache; deferring to parent.');
 
-      const parentResult = await this.parent!.resolveProvider(key, lifecycle);
+      const parentResult = await this.parent!._doResolveProvider(key, lifecycleName, false);
       if (!parentResult) {
         logger.error('Parent did not have - bailing.');
         throw new Error(
           `Domain '${this.name}' requested '${key.description} in ` +
-          `${lifecycle.lifecycle.name.description}' from parent ` +
+          `${lifecycleName.description}' from parent ` +
           `'${this.parent!.name}', but received null. This suggests that the ` +
           `parent doesn't provide (or have a child that exports it into their ` +
           `shared parent's scope.)`);
@@ -181,7 +201,7 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     if (!provider) {
       for (const child of this._children) {
         logger.trace({ childDomain: child.name }, 'Testing child domain.');
-        provider = await child.resolveProvider(key, lifecycle, true);
+        provider = await child._doResolveProvider(key, lifecycleName, true);
 
         if (provider) {
           logger.debug({ childDomain: child.name }, 'Found in child; caching and returning.');

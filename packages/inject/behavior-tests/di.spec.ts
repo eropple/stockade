@@ -519,7 +519,7 @@ describe('integrated DI tests', () => {
 
     const subFacetKey = Symbol.for(`test:Lifecycle:MySubFacet`);
     const subFacetLifecycle: ILifecycle = {
-      name: facetKey,
+      name: subFacetKey,
       parent: facetLifecycle,
       aliases: [SUB_FACET],
     };
@@ -531,11 +531,21 @@ describe('integrated DI tests', () => {
     @AutoComponent({ lifecycle: FACET })
     class B {}
 
+    @AutoComponent({ lifecycle: SUB_FACET })
+    class C {
+      constructor(
+        readonly b: B,
+      ) {}
+    }
+
 
     const domain = Domain.fromDefinition({
       name: 'parent',
-      provides: [A, B],
+      provides: [A, B, C],
     });
+
+    console.log(domain)
+    console.log(subFacetLifecycle)
 
 
     const retA = await facet.resolve(forKey(A), domain);
@@ -544,5 +554,7 @@ describe('integrated DI tests', () => {
     const retB = await facet.resolve(forKey(B), domain);
     expect(retB.constructor).toBe(B);
 
+    const retC = await subFacet.resolve(forKey(C), domain);
+    console.log(retC)
   });
 });
