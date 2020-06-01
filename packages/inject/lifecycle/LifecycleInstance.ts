@@ -326,12 +326,6 @@ export class LifecycleInstance {
     });
   }
 
-  private async _resolveFromCache<T extends Exclude<any, null>>(
-
-  ) {
-
-  }
-
   private async createFromProvider<T extends Exclude<any, null>>(
     provider: DomainProvider,
     resolvingDomain: Domain,

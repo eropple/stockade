@@ -137,7 +137,7 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     //        a concern. We can unroll the cache keys being used in
     //        `_doResolveProvider` and do something more clever when needed.
     for (const name of lifecycle.allLifecycleKeys) {
-      const ret = await this._doResolveProvider(key, name, exportedOnly);
+      const ret = await this._doResolveProvider(key, lifecycle, name, exportedOnly);
 
       if (ret) { return ret; }
     }
@@ -147,6 +147,7 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
 
   private async _doResolveProvider(
     key: symbol,
+    lifecycle: LifecycleInstance,
     lifecycleName: symbol,
     exportedOnly: boolean,
   ): Promise<DomainProvider | null> {
@@ -177,7 +178,7 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     if (!exportedOnly && this._importCache.has(cacheKey)) {
       logger.debug('Found in import cache; deferring to parent.');
 
-      const parentResult = await this.parent!._doResolveProvider(key, lifecycleName, false);
+      const parentResult = await this.parent!.resolveProvider(key, lifecycle, false);
       if (!parentResult) {
         logger.error('Parent did not have - bailing.');
         throw new Error(
@@ -201,7 +202,7 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     if (!provider) {
       for (const child of this._children) {
         logger.trace({ childDomain: child.name }, 'Testing child domain.');
-        provider = await child._doResolveProvider(key, lifecycleName, true);
+        provider = await child.resolveProvider(key, lifecycle, true);
 
         if (provider) {
           logger.debug({ childDomain: child.name }, 'Found in child; caching and returning.');
