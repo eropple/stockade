@@ -67,11 +67,11 @@ function cacheKeysForLifecycle(key: symbol, lifecycle: ILifecycle): Array<string
 export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinition> {
   private readonly _logger: Logger;
 
-  private readonly _importCache: Set<string> = new Set();
-  private readonly _exportCache: Set<string> = new Set();
-  private readonly _providesCache: Map<string, DomainProvider> = new Map();
+  private readonly _validImports: Map<symbol, Set<symbol>> = new Map();
+  private readonly _validExports: Map<symbol, Set<symbol>> = new Map();
+  private readonly _providesCache: Map<symbol, Map<symbol, DomainProvider>> = new Map();
 
-  private readonly _resolveCache: Map<string, DomainProvider | null> = new Map();
+  private readonly _resolveCache: Map<symbol, Map<symbol, DomainProvider | null>> = new Map();
 
   private _descendants: ReadonlyArray<Domain<TDomainDefinition>> | null = null;
   private readonly _children: Array<Domain<TDomainDefinition>>;
@@ -95,12 +95,33 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
       throw new Error(`Domain '${name}' has imports, but no parent?`);
     }
 
-    imports.forEach(i =>
-      this._importCache.add(cacheKeyForResolutionKey(i.key, i.lifecycle)));
-    exports.forEach(e =>
-      this._exportCache.add(cacheKeyForResolutionKey(e.key, e.lifecycle)));
-    provides.forEach(p =>
-      this._providesCache.set(cacheKeyForResolutionKey(p.key, p.lifecycle), p));
+    imports.forEach(i => {
+      let m = this._validImports.get(i.lifecycle);
+      if (!m) {
+        m = new Set<symbol>();
+        this._validImports.set(i.lifecycle, m);
+      }
+
+      m.add(i.key);
+    });
+    exports.forEach(e =>{
+      let m = this._validExports.get(e.lifecycle);
+      if (!m) {
+        m = new Set<symbol>();
+        this._validExports.set(e.lifecycle, m);
+      }
+
+      m.add(e.key);
+    });
+    provides.forEach(p => {
+      let m = this._providesCache.get(p.lifecycle);
+      if (!m) {
+        m = new Map<symbol, DomainProvider>();
+        this._providesCache.set(p.lifecycle, m);
+      }
+
+      m.set(p.key, p);
+    });
   }
 
   /**
@@ -118,6 +139,12 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     }
 
     return this._descendants;
+  }
+
+  isLocallyResolvable(key: symbol, lifecycle: LifecycleInstance): boolean {
+    return lifecycle.allLifecycleKeys.some(k => this._providesCache.get(
+      k
+    ));
   }
 
   /**
@@ -159,12 +186,9 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     });
     logger.debug('Beginning resolution.');
 
-    // TODO: note in docs that `:_:` is illegal in provider names.
-    const cacheKey = cacheKeyForResolutionKey(key, lifecycleName);
-
     // we store `null` results in the cache to avoid having to re-query on
     // unsatisfiable results.
-    const cached = this._resolveCache.get(cacheKey);
+    const cached = this._resolveCache.get(lifecycleName)?.get(key);
     if (cached || cached === null) {
       logger.debug('Found in cache; returning.');
 
@@ -175,7 +199,7 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     // exists)--check the class comment for details!
     //
     // During an export resolution query, we don't call the parent.
-    if (!exportedOnly && this._importCache.has(cacheKey)) {
+    if (!exportedOnly && this._validImports.get(lifecycleName)?.has(key)) {
       logger.debug('Found in import cache; deferring to parent.');
 
       const parentResult = await this.parent!.resolveProvider(key, lifecycle, false);
@@ -193,7 +217,7 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     }
 
     // Parent didn't have, so let's test locally.
-    let provider = this._providesCache.get(cacheKey) || null;
+    let provider = this._providesCache.get(lifecycleName)?.get(key) || null;
     if (provider) {
       logger.debug('Found in provides cache.');
     }
@@ -213,6 +237,14 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
     if (!provider) {
       logger.debug('No provider found.');
     }
+
+    let _resolveSubmap = this._resolveCache.get(lifecycleName);
+    if (!_resolveSubmap) {
+      _resolveSubmap = new Map();
+      this._resolveCache.set(lifecycleName, _resolveSubmap);
+    }
+
+    _resolveSubmap.set(key, provider);
 
     return provider;
   }
