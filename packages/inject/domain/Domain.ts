@@ -142,9 +142,9 @@ export class Domain<TDomainDefinition extends IDomainDefinition = IDomainDefinit
   }
 
   isLocallyResolvable(key: symbol, lifecycle: LifecycleInstance): boolean {
-    return lifecycle.allLifecycleKeys.some(k => this._providesCache.get(
-      k
-    ));
+    return lifecycle.allLifecycleKeys.some(
+      k => this._providesCache.get(k)?.get(key),
+    );
   }
 
   /**

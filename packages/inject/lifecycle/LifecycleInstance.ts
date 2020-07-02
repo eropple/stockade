@@ -277,7 +277,8 @@ export class LifecycleInstance {
         return cached2;
       }
 
-      logger.trace('Cache miss post-lock; resolving.');
+      logger.trace('Cache miss post-lock.');
+
       const provider = await domain.resolveProvider(key, this);
 
       if (provider) { // create from provider

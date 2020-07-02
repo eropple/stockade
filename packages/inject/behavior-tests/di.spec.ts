@@ -523,7 +523,7 @@ describe('integrated DI tests', () => {
       parent: facetLifecycle,
       aliases: [SUB_FACET],
     };
-    const subFacet = new LifecycleInstance(facetLifecycle, singleton, FallbackLogger);
+    const subFacet = new LifecycleInstance(subFacetLifecycle, facet, FallbackLogger);
 
     @AutoComponent({ lifecycle: facetKey })
     class A {}
@@ -560,8 +560,9 @@ describe('integrated DI tests', () => {
     expect(retB.constructor).toBe(B);
 
     const retB2 = await subFacet.resolve(forKey(B), domain);
+    expect(retB).toBe(retB2);
 
-    console.log(retB)
-    console.log(retB2)
+    const retC = await subFacet.resolve(forKey(C), domain);
+    expect(retC.b).toBe(retB);
   });
 });
