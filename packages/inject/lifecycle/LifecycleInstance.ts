@@ -256,7 +256,7 @@ export class LifecycleInstance {
 
     // We'll try to grab the object if it's already extant and in-cache. This avoids
     // the lock step.
-    const cached = this._resolveCache.get(key);
+    const cached = await this.resolveIfCached(key);
     if (cached) {
       logger.debug({ resolutionTimeInMs: getElapsed() }, 'Cache hit (pre-lock); returning.');
 
@@ -277,7 +277,8 @@ export class LifecycleInstance {
         return cached2;
       }
 
-      logger.trace('Cache miss post-lock; resolving.');
+      logger.trace('Cache miss post-lock.');
+
       const provider = await domain.resolveProvider(key, this);
 
       if (provider) { // create from provider
@@ -380,6 +381,12 @@ export class LifecycleInstance {
         err,
       );
     }
+  }
+
+  async resolveIfCached<T extends Exclude<any, null>>(
+    key: symbol,
+  ): Promise<T | null> {
+    return this._resolveCache.get(key) || null;
   }
 
   /**

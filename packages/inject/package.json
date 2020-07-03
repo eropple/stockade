@@ -16,6 +16,7 @@
     "watch": "yarn run -s build --watch",
     "log:parse": "yarn exec -s -- pino-pretty -t",
     "test": "jest",
+    "test:debug": "node --inspect-brk=9229 ../../node_modules/.bin/jest",
     "test:pretty": "bash -c 'yarn run -s test 2> >(yarn run -s log:parse >&2)'",
     "test:verbose": "cross-env STOCKADE_UTILS_FALLBACK_LOGGER_LEVEL=trace jest",
     "test:verbose:pretty": "bash -c 'yarn run -s test:verbose 2> >(yarn run -s log:parse >&2)'"
